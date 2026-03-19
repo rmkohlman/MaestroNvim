@@ -1,9 +1,10 @@
-site_name: MaestroNvim
+site_name: nvp (NvimOps)
 site_url: https://rmkohlman.github.io/MaestroNvim/
-site_description: Neovim configuration management for the DevOpsMaestro ecosystem
+site_description: kubectl-style Neovim plugin and theme manager
 site_author: Robert Kohlman
 repo_name: rmkohlman/MaestroNvim
 repo_url: https://github.com/rmkohlman/MaestroNvim
+
 theme:
   name: material
   palette:
@@ -33,8 +34,10 @@ theme:
     - content.tabs.link
   icon:
     repo: fontawesome/brands/github
+
 plugins:
   - search
+
 markdown_extensions:
   - pymdownx.highlight:
       anchor_linenums: true
@@ -50,17 +53,32 @@ markdown_extensions:
   - tables
   - toc:
       permalink: true
+
 extra:
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/rmkohlman/MaestroNvim
+
 nav:
   - Home: index.md
-  - Nvim Manager: nvim-manager.md
-  - Plugins: plugins.md
-  - Plugin Store: store.md
-  - Core Config: config.md
-  - Plugin Library: library.md
-  - Packages: packages.md
-  - Sync Framework: sync.md
-  - API Reference: api-reference.md
+  - Getting Started:
+    - Installation: getting-started/installation.md
+    - Quick Start: getting-started/quickstart.md
+  - Plugins:
+    - Overview: plugins/overview.md
+    - Plugin Library: plugins/library.md
+    - Plugin Packages: plugins/packages.md
+    - Plugin Sources: plugins/sources.md
+  - Themes:
+    - Overview: themes/overview.md
+    - Theme Library: themes/library.md
+    - CoolNight Collection: themes/coolnight.md
+    - Parametric Generator: themes/parametric.md
+  - Configuration:
+    - Neovim Core Config: configuration/core-config.md
+    - YAML Schema: configuration/yaml-schema.md
+  - Commands Reference: commands.md
+  - YAML Reference:
+    - NvimPlugin: reference/nvim-plugin.md
+    - NvimTheme: reference/nvim-theme.md
+    - NvimPackage: reference/nvim-package.md

@@ -1,63 +1,163 @@
-# MaestroNvim
+# nvp - Neovim Plugin and Theme Manager
 
-MaestroNvim is a Go library for managing Neovim configurations in the DevOpsMaestro ecosystem. It provides a complete toolkit for initializing configs from templates, managing plugins and packages declaratively via YAML, generating Lua configuration trees, and syncing plugins from external sources.
+**kubectl-style Neovim plugin and theme manager using YAML.**
 
-## Packages
+[![Release](https://img.shields.io/github/v/release/rmkohlman/devopsmaestro)](https://github.com/rmkohlman/devopsmaestro/releases/latest)
+[![CI](https://github.com/rmkohlman/devopsmaestro/actions/workflows/ci.yml/badge.svg)](https://github.com/rmkohlman/devopsmaestro/actions/workflows/ci.yml)
 
-| Package | Import Path | Description |
-|---------|-------------|-------------|
-| `nvim` | `github.com/rmkohlman/MaestroNvim/nvim` | Nvim config lifecycle management |
-| `nvimops` | `github.com/rmkohlman/MaestroNvim/nvimops` | Plugin apply, generate, store, and list |
-| `nvimops/plugin` | `github.com/rmkohlman/MaestroNvim/nvimops/plugin` | Plugin types, YAML parsing, Lua generation |
-| `nvimops/store` | `github.com/rmkohlman/MaestroNvim/nvimops/store` | Plugin persistence (file, memory, read-only) |
-| `nvimops/config` | `github.com/rmkohlman/MaestroNvim/nvimops/config` | Core Neovim config generation from YAML |
-| `nvimops/library` | `github.com/rmkohlman/MaestroNvim/nvimops/library` | Embedded library of 51 curated plugins |
-| `nvimops/package` | `github.com/rmkohlman/MaestroNvim/nvimops/package` | Plugin package types and YAML parsing |
-| `nvimops/package/library` | `github.com/rmkohlman/MaestroNvim/nvimops/package/library` | Embedded library of 12 curated packages |
-| `nvimops/sync` | `github.com/rmkohlman/MaestroNvim/nvimops/sync` | Sync framework interfaces and registry |
+---
 
-## Installation
+## What is nvp?
 
+`nvp` is the Neovim plugin and theme management tool from the DevOpsMaestro toolkit. It lets you define plugins and themes as YAML files, apply them from files, URLs, or GitHub repositories, and generate Lua configuration for lazy.nvim.
+
+## Key Features
+
+**Plugins**
+
+- **YAML-based plugins** - Define plugins in YAML, generate Lua for lazy.nvim
+- **38+ curated library** - Browse and install pre-configured plugins instantly
+- **Plugin packages** - Install grouped collections with a single command
+- **External source sync** - Import plugins from LazyVim, AstroNvim, NvChad, and other sources
+- **kubectl-style IaC** - `nvp apply -f plugin.yaml`, URL support, GitHub shorthand
+
+**Themes**
+
+- **34+ embedded themes** - All themes available instantly, no installation required
+- **21 CoolNight variants** - Blue, purple, green, warm, red/pink, monochrome, and special families
+- **13+ popular themes** - Catppuccin, Dracula, Everforest, Gruvbox, Tokyo Night, Nord, and more
+- **Parametric generator** - Create custom CoolNight variants from a hue angle, hex color, or preset name
+
+**Infrastructure**
+
+- **Standalone** - Works completely independently, no containers or dvm required
+- **Shared database** - Integrates with dvm and dvt via `~/.devopsmaestro/devopsmaestro.db`
+
+---
+
+## Quick Install
+
+=== "Homebrew (Recommended)"
+
+    ```bash
+    brew tap rmkohlman/tap
+
+    # Install the full DevOpsMaestro toolkit (includes nvp)
+    brew install devopsmaestro
+
+    # Or install nvp standalone
+    brew install nvimops
+
+    # Verify
+    nvp version
+    ```
+
+=== "From Source"
+
+    ```bash
+    git clone https://github.com/rmkohlman/devopsmaestro.git
+    cd devopsmaestro
+    go build -o nvp ./cmd/nvp/
+    sudo mv nvp /usr/local/bin/
+    ```
+
+---
+
+## Quick Example
+
+```bash
+# Initialize nvp
+nvp init
+
+# Browse and install plugins
+nvp library list
+nvp library install telescope treesitter lspconfig
+
+# Install a theme
+nvp theme library install coolnight-ocean --use
+
+# Generate Lua files
+nvp generate
+# Creates ~/.config/nvim/lua/plugins/nvp/*.lua
 ```
-go get github.com/rmkohlman/MaestroNvim
+
+### Infrastructure as Code
+
+```bash
+# Apply from file, URL, or GitHub
+nvp apply -f plugin.yaml
+nvp apply -f https://example.com/plugin.yaml
+nvp apply -f github:rmkohlman/nvim-yaml-plugins/plugins/telescope.yaml
 ```
 
-## Quick Examples
+### Plugin YAML Format
 
-**Initialize a config from a template:**
-
-```go
-mgr := nvim.NewManager()
-err := mgr.Init(nvim.InitOptions{
-    Template: "lazyvim",
-})
+```yaml
+apiVersion: devopsmaestro.io/v1
+kind: NvimPlugin
+metadata:
+  name: telescope
+  category: fuzzy-finder
+spec:
+  repo: nvim-telescope/telescope.nvim
+  dependencies:
+    - nvim-lua/plenary.nvim
+  config: |
+    require("telescope").setup({})
 ```
 
-**Parse a plugin YAML file and generate Lua:**
+---
 
-```go
-p, err := plugin.ParseYAMLFile("telescope.yaml")
-gen := plugin.NewGenerator()
-lua, err := gen.GenerateLua(p)
-```
+## Next Steps
 
-**Look up a plugin in the embedded library:**
+<div class="grid cards" markdown>
 
-```go
-lib, _ := library.NewLibrary()
-p, ok := lib.Get("telescope")
-```
+-   **Getting Started**
 
-**Generate a complete Neovim config directory:**
+    ---
 
-```go
-cfg, _ := config.ParseYAMLFile("core.yaml")
-gen := config.NewGenerator()
-gen.WriteToDirectory(cfg, plugins, "/home/dev/.config/nvim")
-```
+    Install nvp and set up your first plugin configuration
 
-## Source
+    [Installation](getting-started/installation.md)
 
-[https://github.com/rmkohlman/MaestroNvim](https://github.com/rmkohlman/MaestroNvim)
+-   **Plugin Library**
 
-Part of the [DevOpsMaestro ecosystem](https://github.com/rmkohlman/devopsmaestro).
+    ---
+
+    Browse and install from 38+ curated plugins
+
+    [Plugin Library](plugins/library.md)
+
+-   **Theme Collection**
+
+    ---
+
+    34+ embedded themes with CoolNight and parametric generator
+
+    [Themes Overview](themes/overview.md)
+
+-   **CoolNight Collection**
+
+    ---
+
+    21 parametrically generated variants for extended coding sessions
+
+    [CoolNight](themes/coolnight.md)
+
+-   **Commands Reference**
+
+    ---
+
+    Complete reference for all nvp commands and flags
+
+    [Commands](commands.md)
+
+-   **YAML Reference**
+
+    ---
+
+    Complete YAML schemas for NvimPlugin, NvimTheme, NvimPackage
+
+    [NvimPlugin](reference/nvim-plugin.md)
+
+</div>
