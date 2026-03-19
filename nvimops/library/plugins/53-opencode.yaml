@@ -1,0 +1,71 @@
+apiVersion: devopsmaestro.io/v1
+kind: NvimPlugin
+metadata:
+  name: opencode
+  description: "Integrate the opencode AI assistant with Neovim"
+  category: ai
+  tags: ["ai", "opencode", "assistant", "terminal"]
+spec:
+  repo: nickjvandyke/opencode.nvim
+  version: "v0.5.2"
+  dependencies:
+    - repo: folke/snacks.nvim
+  cmd: ["Opencode"]
+  keys:
+    - key: "<C-a>"
+      mode: ["n", "x"]
+      desc: "Ask opencode"
+    - key: "<C-x>"
+      mode: ["n", "x"]
+      desc: "Execute opencode action"
+    - key: "<C-.>"
+      mode: ["n", "t"]
+      desc: "Toggle opencode"
+    - key: "go"
+      mode: ["n", "x"]
+      desc: "Add range to opencode"
+    - key: "goo"
+      mode: ["n"]
+      desc: "Add line to opencode"
+  config: |
+    ---@type opencode.Opts
+    vim.g.opencode_opts = {}
+
+    vim.o.autoread = true
+
+    -- Ask opencode with @this context
+    vim.keymap.set({ "n", "x" }, "<C-a>", function()
+    	require("opencode").ask("@this: ", { submit = true })
+    end, { desc = "Ask opencode" })
+
+    -- Select opencode action
+    vim.keymap.set({ "n", "x" }, "<C-x>", function()
+    	require("opencode").select()
+    end, { desc = "Execute opencode action" })
+
+    -- Toggle opencode terminal
+    vim.keymap.set({ "n", "t" }, "<C-.>", function()
+    	require("opencode").toggle()
+    end, { desc = "Toggle opencode" })
+
+    -- Operator: add range to opencode
+    vim.keymap.set({ "n", "x" }, "go", function()
+    	return require("opencode").operator("@this ")
+    end, { desc = "Add range to opencode", expr = true })
+
+    -- Operator: add line to opencode
+    vim.keymap.set("n", "goo", function()
+    	return require("opencode").operator("@this ") .. "_"
+    end, { desc = "Add line to opencode", expr = true })
+
+    -- Scroll opencode
+    vim.keymap.set("n", "<S-C-u>", function()
+    	require("opencode").command("session.half.page.up")
+    end, { desc = "Scroll opencode up" })
+    vim.keymap.set("n", "<S-C-d>", function()
+    	require("opencode").command("session.half.page.down")
+    end, { desc = "Scroll opencode down" })
+
+    -- Remap increment/decrement since <C-a> and <C-x> are taken
+    vim.keymap.set("n", "+", "<C-a>", { desc = "Increment under cursor", noremap = true })
+    vim.keymap.set("n", "-", "<C-x>", { desc = "Decrement under cursor", noremap = true })
