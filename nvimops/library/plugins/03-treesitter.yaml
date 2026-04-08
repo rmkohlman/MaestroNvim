@@ -42,3 +42,10 @@ spec:
 
     -- Use bash parser for zsh files
     vim.treesitter.language.register("bash", "zsh")
+  health_checks:
+    - type: lua_module
+      value: nvim-treesitter
+      description: "Treesitter module is loadable"
+    - type: treesitter
+      value: lua
+      description: "Lua parser is installed"

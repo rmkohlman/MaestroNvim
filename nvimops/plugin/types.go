@@ -38,6 +38,9 @@ type Plugin struct {
 	// Additional keymaps (separate from lazy keys)
 	Keymaps []Keymap `json:"keymaps,omitempty" yaml:"keymaps,omitempty"`
 
+	// Health checks
+	HealthChecks []HealthCheck `json:"health_checks,omitempty" yaml:"health_checks,omitempty"`
+
 	// Metadata
 	Category string   `json:"category,omitempty" yaml:"category,omitempty"`
 	Tags     []string `json:"tags,omitempty" yaml:"tags,omitempty"`
@@ -65,6 +68,56 @@ type Keymap struct {
 	Desc   string   `json:"desc,omitempty" yaml:"desc,omitempty"`
 }
 
+// HealthCheckType represents the type of health check to perform.
+type HealthCheckType string
+
+const (
+	// HealthCheckLuaModule checks if a Lua module is loadable via require().
+	HealthCheckLuaModule HealthCheckType = "lua_module"
+	// HealthCheckCommand checks if a Neovim command exists.
+	HealthCheckCommand HealthCheckType = "command"
+	// HealthCheckTreesitter checks if a treesitter parser is installed.
+	HealthCheckTreesitter HealthCheckType = "treesitter"
+	// HealthCheckLSP checks if an LSP server is configured.
+	HealthCheckLSP HealthCheckType = "lsp"
+)
+
+// HealthCheck defines a single health check for a plugin.
+type HealthCheck struct {
+	// Type is the kind of health check (lua_module, command, treesitter, lsp).
+	Type HealthCheckType `json:"type" yaml:"type"`
+	// Value is the argument for the check (module name, command name, etc.).
+	Value string `json:"value" yaml:"value"`
+	// Description is a human-readable description of what this check verifies.
+	Description string `json:"description,omitempty" yaml:"description,omitempty"`
+}
+
+// HealthCheckResult holds the result of running a single health check.
+type HealthCheckResult struct {
+	Plugin  string       `json:"plugin"`
+	Check   HealthCheck  `json:"check"`
+	Status  HealthStatus `json:"status"`
+	Message string       `json:"message,omitempty"`
+}
+
+// HealthStatus represents the outcome of a health check.
+type HealthStatus string
+
+const (
+	HealthStatusHealthy   HealthStatus = "healthy"
+	HealthStatusUnhealthy HealthStatus = "unhealthy"
+	HealthStatusUnknown   HealthStatus = "unknown"
+	HealthStatusSkipped   HealthStatus = "skipped"
+)
+
+// PluginHealthReport is the full health report for a single plugin.
+type PluginHealthReport struct {
+	PluginName string              `json:"plugin_name"`
+	Enabled    bool                `json:"enabled"`
+	Status     HealthStatus        `json:"status"`
+	Results    []HealthCheckResult `json:"results,omitempty"`
+}
+
 // PluginYAML represents the full YAML document format (kubectl-style).
 // This is the user-facing format for plugin definition files.
 type PluginYAML struct {
@@ -86,22 +139,23 @@ type PluginMetadata struct {
 
 // PluginSpec contains the plugin specification in the YAML format.
 type PluginSpec struct {
-	Repo         string           `yaml:"repo"`
-	Branch       string           `yaml:"branch,omitempty"`
-	Version      string           `yaml:"version,omitempty"`
-	Priority     int              `yaml:"priority,omitempty"`
-	Lazy         bool             `yaml:"lazy,omitempty"`
-	Enabled      *bool            `yaml:"enabled,omitempty"` // Pointer to distinguish unset from false
-	Event        StringOrSlice    `yaml:"event,omitempty"`
-	Ft           StringOrSlice    `yaml:"ft,omitempty"`
-	Cmd          StringOrSlice    `yaml:"cmd,omitempty"`
-	Keys         []KeymapYAML     `yaml:"keys,omitempty"`
-	Dependencies []DependencyYAML `yaml:"dependencies,omitempty"`
-	Build        string           `yaml:"build,omitempty"`
-	Config       string           `yaml:"config,omitempty"`
-	Init         string           `yaml:"init,omitempty"`
-	Opts         interface{}      `yaml:"opts,omitempty"`
-	Keymaps      []KeymapYAML     `yaml:"keymaps,omitempty"`
+	Repo         string            `yaml:"repo"`
+	Branch       string            `yaml:"branch,omitempty"`
+	Version      string            `yaml:"version,omitempty"`
+	Priority     int               `yaml:"priority,omitempty"`
+	Lazy         bool              `yaml:"lazy,omitempty"`
+	Enabled      *bool             `yaml:"enabled,omitempty"` // Pointer to distinguish unset from false
+	Event        StringOrSlice     `yaml:"event,omitempty"`
+	Ft           StringOrSlice     `yaml:"ft,omitempty"`
+	Cmd          StringOrSlice     `yaml:"cmd,omitempty"`
+	Keys         []KeymapYAML      `yaml:"keys,omitempty"`
+	Dependencies []DependencyYAML  `yaml:"dependencies,omitempty"`
+	Build        string            `yaml:"build,omitempty"`
+	Config       string            `yaml:"config,omitempty"`
+	Init         string            `yaml:"init,omitempty"`
+	Opts         interface{}       `yaml:"opts,omitempty"`
+	Keymaps      []KeymapYAML      `yaml:"keymaps,omitempty"`
+	HealthChecks []HealthCheckYAML `yaml:"health_checks,omitempty"`
 }
 
 // KeymapYAML represents a keymap in YAML format (flexible mode field).
@@ -120,6 +174,13 @@ type DependencyYAML struct {
 	Version string `yaml:"version,omitempty"`
 	Branch  string `yaml:"branch,omitempty"`
 	Config  bool   `yaml:"config,omitempty"`
+}
+
+// HealthCheckYAML represents a health check in YAML format.
+type HealthCheckYAML struct {
+	Type        string `yaml:"type"`
+	Value       string `yaml:"value"`
+	Description string `yaml:"description,omitempty"`
 }
 
 // StringOrSlice handles YAML fields that can be either a string or []string.
@@ -207,6 +268,15 @@ func (py *PluginYAML) ToPlugin() *Plugin {
 		})
 	}
 
+	// Convert health checks
+	for _, hc := range py.Spec.HealthChecks {
+		p.HealthChecks = append(p.HealthChecks, HealthCheck{
+			Type:        HealthCheckType(hc.Type),
+			Value:       hc.Value,
+			Description: hc.Description,
+		})
+	}
+
 	return p
 }
 
@@ -272,6 +342,15 @@ func (p *Plugin) ToYAML() *PluginYAML {
 			Version: d.Version,
 			Branch:  d.Branch,
 			Config:  d.Config,
+		})
+	}
+
+	// Convert health checks
+	for _, hc := range p.HealthChecks {
+		py.Spec.HealthChecks = append(py.Spec.HealthChecks, HealthCheckYAML{
+			Type:        string(hc.Type),
+			Value:       hc.Value,
+			Description: hc.Description,
 		})
 	}
 

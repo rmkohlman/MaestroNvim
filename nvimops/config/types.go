@@ -33,6 +33,44 @@ type CoreConfig struct {
 	// BasePlugins are simple plugins loaded in plugins/init.lua
 	// These are plugins without complex config (just repo strings)
 	BasePlugins []string `yaml:"basePlugins,omitempty"`
+
+	// CustomHighlights defines custom Neovim highlight groups.
+	// These generate vim.api.nvim_set_hl() calls in core/highlights.lua.
+	CustomHighlights map[string]HighlightGroup `yaml:"customHighlights,omitempty"`
+}
+
+// HighlightGroup represents a Neovim highlight group definition.
+// Either set explicit attributes (Fg, Bg, Bold, etc.) or Link to another group.
+type HighlightGroup struct {
+	// Fg is the foreground color (e.g., "#ff0000")
+	Fg string `yaml:"fg,omitempty"`
+
+	// Bg is the background color (e.g., "#000000")
+	Bg string `yaml:"bg,omitempty"`
+
+	// Sp is the special color for undercurl/underline (e.g., "#ff0000")
+	Sp string `yaml:"sp,omitempty"`
+
+	// Bold enables bold text
+	Bold bool `yaml:"bold,omitempty"`
+
+	// Italic enables italic text
+	Italic bool `yaml:"italic,omitempty"`
+
+	// Underline enables underline
+	Underline bool `yaml:"underline,omitempty"`
+
+	// Undercurl enables undercurl (wavy underline)
+	Undercurl bool `yaml:"undercurl,omitempty"`
+
+	// Strikethrough enables strikethrough
+	Strikethrough bool `yaml:"strikethrough,omitempty"`
+
+	// Reverse swaps foreground and background
+	Reverse bool `yaml:"reverse,omitempty"`
+
+	// Link links this group to another highlight group (mutually exclusive with other attrs)
+	Link string `yaml:"link,omitempty"`
 }
 
 // Keymap represents a single key mapping.

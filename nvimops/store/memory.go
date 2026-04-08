@@ -173,6 +173,10 @@ func copyPlugin(p *plugin.Plugin) *plugin.Plugin {
 		copy.Keymaps = make([]plugin.Keymap, len(p.Keymaps))
 		copy.Keymaps = append(copy.Keymaps[:0], p.Keymaps...)
 	}
+	if p.HealthChecks != nil {
+		copy.HealthChecks = make([]plugin.HealthCheck, len(p.HealthChecks))
+		copy.HealthChecks = append(copy.HealthChecks[:0], p.HealthChecks...)
+	}
 	// Note: Opts map is shallow copied (same reference)
 	return &copy
 }

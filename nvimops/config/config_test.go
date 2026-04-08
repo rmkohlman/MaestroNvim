@@ -353,3 +353,308 @@ func TestToYAML(t *testing.T) {
 		t.Errorf("leader mismatch after round-trip")
 	}
 }
+
+func TestParseYAML_CustomHighlights(t *testing.T) {
+	yaml := `
+namespace: workspace
+customHighlights:
+  MyCustomGroup:
+    fg: "#ff0000"
+    bg: "#000000"
+    bold: true
+  AnotherGroup:
+    link: Comment
+  UnderlinedGroup:
+    fg: "#00ff00"
+    sp: "#ff0000"
+    underline: true
+    italic: true
+`
+	cfg, err := ParseYAML([]byte(yaml))
+	if err != nil {
+		t.Fatalf("failed to parse YAML: %v", err)
+	}
+
+	if len(cfg.CustomHighlights) != 3 {
+		t.Fatalf("expected 3 custom highlights, got %d", len(cfg.CustomHighlights))
+	}
+
+	// Check MyCustomGroup
+	hl, ok := cfg.CustomHighlights["MyCustomGroup"]
+	if !ok {
+		t.Fatal("expected MyCustomGroup highlight")
+	}
+	if hl.Fg != "#ff0000" {
+		t.Errorf("expected fg '#ff0000', got %q", hl.Fg)
+	}
+	if hl.Bg != "#000000" {
+		t.Errorf("expected bg '#000000', got %q", hl.Bg)
+	}
+	if !hl.Bold {
+		t.Error("expected bold = true")
+	}
+
+	// Check AnotherGroup (link)
+	hl2, ok := cfg.CustomHighlights["AnotherGroup"]
+	if !ok {
+		t.Fatal("expected AnotherGroup highlight")
+	}
+	if hl2.Link != "Comment" {
+		t.Errorf("expected link 'Comment', got %q", hl2.Link)
+	}
+
+	// Check UnderlinedGroup
+	hl3, ok := cfg.CustomHighlights["UnderlinedGroup"]
+	if !ok {
+		t.Fatal("expected UnderlinedGroup highlight")
+	}
+	if !hl3.Underline {
+		t.Error("expected underline = true")
+	}
+	if !hl3.Italic {
+		t.Error("expected italic = true")
+	}
+	if hl3.Sp != "#ff0000" {
+		t.Errorf("expected sp '#ff0000', got %q", hl3.Sp)
+	}
+}
+
+func TestGenerator_GenerateHighlightsLua(t *testing.T) {
+	gen := NewGenerator()
+	cfg := &CoreConfig{
+		Namespace: "workspace",
+		CustomHighlights: map[string]HighlightGroup{
+			"MyCustomGroup": {
+				Fg:   "#ff0000",
+				Bg:   "#000000",
+				Bold: true,
+			},
+			"LinkedGroup": {
+				Link: "Comment",
+			},
+			"FancyGroup": {
+				Fg:        "#00ff00",
+				Sp:        "#0000ff",
+				Italic:    true,
+				Undercurl: true,
+			},
+		},
+	}
+
+	generated, err := gen.Generate(cfg)
+	if err != nil {
+		t.Fatalf("failed to generate: %v", err)
+	}
+
+	lua := generated.HighlightsLua
+
+	// Check header
+	if !strings.Contains(lua, "-- Custom highlight groups") {
+		t.Error("HighlightsLua should contain header comment")
+	}
+
+	// Check FancyGroup attributes
+	if !strings.Contains(lua, `nvim_set_hl(0, "FancyGroup", { fg = "#00ff00", sp = "#0000ff", italic = true, undercurl = true })`) {
+		t.Errorf("HighlightsLua should contain FancyGroup with correct attrs, got:\n%s", lua)
+	}
+
+	// Check LinkedGroup (link syntax)
+	if !strings.Contains(lua, `nvim_set_hl(0, "LinkedGroup", { link = "Comment" })`) {
+		t.Errorf("HighlightsLua should contain LinkedGroup link, got:\n%s", lua)
+	}
+
+	// Check MyCustomGroup
+	if !strings.Contains(lua, `nvim_set_hl(0, "MyCustomGroup", { fg = "#ff0000", bg = "#000000", bold = true })`) {
+		t.Errorf("HighlightsLua should contain MyCustomGroup, got:\n%s", lua)
+	}
+}
+
+func TestGenerator_HighlightsLua_Empty(t *testing.T) {
+	gen := NewGenerator()
+	cfg := &CoreConfig{
+		Namespace: "workspace",
+	}
+
+	generated, err := gen.Generate(cfg)
+	if err != nil {
+		t.Fatalf("failed to generate: %v", err)
+	}
+
+	if generated.HighlightsLua != "" {
+		t.Errorf("expected empty HighlightsLua when no custom highlights, got:\n%s", generated.HighlightsLua)
+	}
+}
+
+func TestGenerator_CoreInitLua_IncludesHighlights(t *testing.T) {
+	gen := NewGenerator()
+	cfg := &CoreConfig{
+		Namespace: "workspace",
+		CustomHighlights: map[string]HighlightGroup{
+			"MyGroup": {Fg: "#ff0000"},
+		},
+	}
+
+	generated, err := gen.Generate(cfg)
+	if err != nil {
+		t.Fatalf("failed to generate: %v", err)
+	}
+
+	if !strings.Contains(generated.CoreInitLua, `require("workspace.core.highlights")`) {
+		t.Errorf("CoreInitLua should require highlights when custom highlights present, got:\n%s", generated.CoreInitLua)
+	}
+}
+
+func TestGenerator_CoreInitLua_ExcludesHighlightsWhenEmpty(t *testing.T) {
+	gen := NewGenerator()
+	cfg := &CoreConfig{
+		Namespace: "workspace",
+	}
+
+	generated, err := gen.Generate(cfg)
+	if err != nil {
+		t.Fatalf("failed to generate: %v", err)
+	}
+
+	if strings.Contains(generated.CoreInitLua, "highlights") {
+		t.Errorf("CoreInitLua should NOT require highlights when none defined, got:\n%s", generated.CoreInitLua)
+	}
+}
+
+func TestGenerator_WriteToDirectory_WithHighlights(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "nvp-highlights-test")
+	if err != nil {
+		t.Fatalf("failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	gen := NewGenerator()
+	cfg := &CoreConfig{
+		Namespace: "workspace",
+		CustomHighlights: map[string]HighlightGroup{
+			"TestHighlight": {Fg: "#ff0000", Bold: true},
+		},
+	}
+
+	err = gen.WriteToDirectory(cfg, nil, tmpDir)
+	if err != nil {
+		t.Fatalf("failed to write to directory: %v", err)
+	}
+
+	// Check highlights.lua was written
+	hlPath := filepath.Join(tmpDir, "lua", "workspace", "core", "highlights.lua")
+	content, err := os.ReadFile(hlPath)
+	if err != nil {
+		t.Fatalf("highlights.lua not found: %v", err)
+	}
+
+	if !strings.Contains(string(content), `nvim_set_hl(0, "TestHighlight"`) {
+		t.Errorf("highlights.lua should contain TestHighlight, got:\n%s", string(content))
+	}
+}
+
+func TestGenerator_WriteToDirectory_NoHighlightsFile(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "nvp-no-highlights-test")
+	if err != nil {
+		t.Fatalf("failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	gen := NewGenerator()
+	cfg := &CoreConfig{
+		Namespace: "workspace",
+	}
+
+	err = gen.WriteToDirectory(cfg, nil, tmpDir)
+	if err != nil {
+		t.Fatalf("failed to write to directory: %v", err)
+	}
+
+	// Check highlights.lua was NOT written
+	hlPath := filepath.Join(tmpDir, "lua", "workspace", "core", "highlights.lua")
+	if _, err := os.Stat(hlPath); !os.IsNotExist(err) {
+		t.Error("highlights.lua should NOT exist when no custom highlights defined")
+	}
+}
+
+func TestCustomHighlights_AllAttributes(t *testing.T) {
+	gen := NewGenerator()
+	cfg := &CoreConfig{
+		Namespace: "workspace",
+		CustomHighlights: map[string]HighlightGroup{
+			"FullGroup": {
+				Fg:            "#aabbcc",
+				Bg:            "#112233",
+				Sp:            "#445566",
+				Bold:          true,
+				Italic:        true,
+				Underline:     true,
+				Undercurl:     true,
+				Strikethrough: true,
+				Reverse:       true,
+			},
+		},
+	}
+
+	generated, err := gen.Generate(cfg)
+	if err != nil {
+		t.Fatalf("failed to generate: %v", err)
+	}
+
+	lua := generated.HighlightsLua
+
+	// Verify all attributes are present
+	for _, attr := range []string{"fg = \"#aabbcc\"", "bg = \"#112233\"", "sp = \"#445566\"",
+		"bold = true", "italic = true", "underline = true", "undercurl = true",
+		"strikethrough = true", "reverse = true"} {
+		if !strings.Contains(lua, attr) {
+			t.Errorf("HighlightsLua missing attribute %q, got:\n%s", attr, lua)
+		}
+	}
+}
+
+func TestCustomHighlights_YAMLRoundTrip(t *testing.T) {
+	cfg := &CoreConfig{
+		Namespace: "workspace",
+		Leader:    " ",
+		CustomHighlights: map[string]HighlightGroup{
+			"RoundTrip": {
+				Fg:     "#ff0000",
+				Bold:   true,
+				Italic: true,
+			},
+			"LinkedHL": {
+				Link: "Normal",
+			},
+		},
+	}
+
+	data, err := cfg.ToYAML()
+	if err != nil {
+		t.Fatalf("failed to serialize: %v", err)
+	}
+
+	cfg2, err := ParseYAML(data)
+	if err != nil {
+		t.Fatalf("failed to parse: %v", err)
+	}
+
+	if len(cfg2.CustomHighlights) != 2 {
+		t.Fatalf("expected 2 custom highlights after round-trip, got %d", len(cfg2.CustomHighlights))
+	}
+
+	rt, ok := cfg2.CustomHighlights["RoundTrip"]
+	if !ok {
+		t.Fatal("expected RoundTrip highlight after round-trip")
+	}
+	if rt.Fg != "#ff0000" || !rt.Bold || !rt.Italic {
+		t.Errorf("RoundTrip attrs mismatch: fg=%q bold=%v italic=%v", rt.Fg, rt.Bold, rt.Italic)
+	}
+
+	linked, ok := cfg2.CustomHighlights["LinkedHL"]
+	if !ok {
+		t.Fatal("expected LinkedHL highlight after round-trip")
+	}
+	if linked.Link != "Normal" {
+		t.Errorf("LinkedHL link mismatch: got %q", linked.Link)
+	}
+}

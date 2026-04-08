@@ -33,3 +33,7 @@ spec:
         map("n", "<leader>hD", function() gs.diffthis("~") end, "Diff this ~")
         map({ "o", "x" }, "ih", ":<C-U>Gitsigns select_hunk<CR>", "Gitsigns select hunk")
       end
+  health_checks:
+    - type: lua_module
+      value: gitsigns
+      description: "Gitsigns module is loadable"

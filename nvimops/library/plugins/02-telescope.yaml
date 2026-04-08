@@ -57,3 +57,10 @@ spec:
     keymap.set("n", "<leader>fc", "<cmd>Telescope grep_string<cr>", { desc = "Find string under cursor in cwd" })
     keymap.set("n", "<leader>ft", "<cmd>TodoTelescope<cr>", { desc = "Find todos" })
     keymap.set("n", "<leader>fk", "<cmd>Telescope keymaps<cr>", { desc = "Find keymaps" })
+  health_checks:
+    - type: lua_module
+      value: telescope
+      description: "Telescope core module is loadable"
+    - type: command
+      value: Telescope
+      description: "Telescope command is available"
