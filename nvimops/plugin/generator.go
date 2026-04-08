@@ -9,12 +9,23 @@ import (
 type Generator struct {
 	// IndentSize is the number of spaces per indentation level (default: 2)
 	IndentSize int
+
+	// LockFile, if set, pins plugins to specific commits in generated Lua.
+	LockFile *LockFile
 }
 
 // NewGenerator creates a new Lua generator with default settings.
 func NewGenerator() *Generator {
 	return &Generator{
 		IndentSize: 2,
+	}
+}
+
+// NewGeneratorWithLock creates a Lua generator that pins commits from a lock file.
+func NewGeneratorWithLock(lf *LockFile) *Generator {
+	return &Generator{
+		IndentSize: 2,
+		LockFile:   lf,
 	}
 }
 
@@ -35,6 +46,14 @@ func (g *Generator) GenerateLua(p *Plugin) (string, error) {
 	// Version (tag)
 	if p.Version != "" {
 		lua.WriteString(fmt.Sprintf("%sversion = \"%s\",\n", indent, p.Version))
+	}
+
+	// Commit pinning from lock file
+	if g.LockFile != nil {
+		shortName := repoShortName(p.Repo)
+		if entry, ok := g.LockFile.Entries[shortName]; ok && entry.Commit != "" {
+			lua.WriteString(fmt.Sprintf("%scommit = \"%s\",\n", indent, entry.Commit))
+		}
 	}
 
 	// Priority
