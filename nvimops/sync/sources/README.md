@@ -100,11 +100,6 @@ Uses pragmatic regex-based parsing to extract:
 
 ## Testing
 
-Run the test suite:
-```bash
-go test ./pkg/nvimops/sync/sources/... -v
-```
-
 Test real API access:
 ```bash
 nvp source sync lazyvim --dry-run -v
