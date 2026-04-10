@@ -14,6 +14,7 @@ spec:
       build: make
     - repo: nvim-tree/nvim-web-devicons
     - repo: folke/which-key.nvim
+    - repo: nvim-treesitter/nvim-treesitter
   config: |
     local telescope = require("telescope")
     local actions = require("telescope.actions")

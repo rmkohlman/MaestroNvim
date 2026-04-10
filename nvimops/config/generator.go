@@ -169,6 +169,15 @@ func (g *Generator) generateInitLua(cfg *CoreConfig, namespace string) string {
 vim.g.mapleader = "%s"
 vim.g.maplocalleader = "%s"
 
+-- Treesitter API compatibility shim (fixes #226)
+-- Neovim 0.10+ removed vim.treesitter.language.ft_to_lang in favor of get_lang.
+-- Telescope and other plugins may still reference ft_to_lang, causing nil errors.
+if vim.treesitter and vim.treesitter.language then
+  if not vim.treesitter.language.ft_to_lang and vim.treesitter.language.get_lang then
+    vim.treesitter.language.ft_to_lang = vim.treesitter.language.get_lang
+  end
+end
+
 require("%s.core")
 require("%s.lazy")
 `, leader, leader, namespace, namespace)
