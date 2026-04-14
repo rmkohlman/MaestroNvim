@@ -1,0 +1,158 @@
+apiVersion: devopsmaestro.io/v1
+kind: NvimPlugin
+metadata:
+  name: euporie
+  description: "Jupyter notebook editing via euporie floating terminal"
+  category: language
+  tags: ["python", "jupyter", "notebook", "ipynb"]
+spec:
+  repo: bxrne/euporie.nvim
+  event: ["BufReadCmd *.ipynb"]
+  keys:
+    - key: "<M-n>"
+      mode: ["n", "t"]
+      desc: "Toggle Jupyter Notebook (Euporie)"
+  init: |
+    -- Set filetype for .ipynb files
+    vim.filetype.add({
+    	extension = {
+    		ipynb = "ipynb",
+    	},
+    })
+
+    -- State tracking
+    local euporie_win = nil
+    local euporie_buf = nil
+    local current_filepath = nil
+
+    -- Close euporie window
+    local function close_euporie_win()
+    	if euporie_win and vim.api.nvim_win_is_valid(euporie_win) then
+    		vim.api.nvim_win_close(euporie_win, true)
+    		euporie_win = nil
+    	end
+    end
+
+    -- Toggle euporie in a floating window
+    local function toggle_euporie_float(filepath)
+    	-- Use current filepath if none provided (for toggling)
+    	if not filepath and current_filepath then
+    		filepath = current_filepath
+    	end
+
+    	-- Opening a different file? Clean up old buffer
+    	if filepath and filepath ~= current_filepath then
+    		if euporie_win and vim.api.nvim_win_is_valid(euporie_win) then
+    			close_euporie_win()
+    		end
+    		if euporie_buf and vim.api.nvim_buf_is_valid(euporie_buf) then
+    			vim.api.nvim_buf_delete(euporie_buf, { force = true })
+    			euporie_buf = nil
+    		end
+    	end
+
+    	-- Window exists? Close it (toggle behavior)
+    	if euporie_win and vim.api.nvim_win_is_valid(euporie_win) then
+    		close_euporie_win()
+    		return
+    	end
+
+    	-- Buffer exists with same file? Reopen window
+    	if euporie_buf and vim.api.nvim_buf_is_valid(euporie_buf) and filepath == current_filepath then
+    		local width = math.floor(vim.o.columns * 0.9)
+    		local height = math.floor(vim.o.lines * 0.9)
+    		local row = math.floor((vim.o.lines - height) / 2)
+    		local col = math.floor((vim.o.columns - width) / 2)
+
+    		euporie_win = vim.api.nvim_open_win(euporie_buf, true, {
+    			relative = "editor",
+    			width = width,
+    			height = height,
+    			row = row,
+    			col = col,
+    			style = "minimal",
+    			border = "rounded",
+    		})
+    		vim.cmd("startinsert")
+    		return
+    	end
+
+    	-- Build euporie command
+    	local config = require("euporie").config
+    	local cmd = "euporie-notebook"
+
+    	if filepath then
+    		cmd = cmd .. " " .. vim.fn.shellescape(filepath)
+    		current_filepath = filepath
+    	else
+    		current_filepath = nil
+    	end
+
+    	cmd = cmd .. " --recent-files"
+
+    	if config.graphics_dpi then
+    		cmd = cmd .. " --graphics-dpi=" .. config.graphics_dpi
+    	end
+
+    	if config.graphics_height then
+    		cmd = cmd .. " --graphics-height=" .. config.graphics_height
+    	end
+
+    	-- Create floating window
+    	local width = math.floor(vim.o.columns * 0.9)
+    	local height = math.floor(vim.o.lines * 0.9)
+    	local row = math.floor((vim.o.lines - height) / 2)
+    	local col = math.floor((vim.o.columns - width) / 2)
+
+    	euporie_buf = vim.api.nvim_create_buf(false, true)
+    	euporie_win = vim.api.nvim_open_win(euporie_buf, true, {
+    		relative = "editor",
+    		width = width,
+    		height = height,
+    		row = row,
+    		col = col,
+    		style = "minimal",
+    		border = "rounded",
+    	})
+
+    	-- Start terminal
+    	vim.fn.termopen(cmd, {
+    		on_exit = function()
+    			if euporie_buf and vim.api.nvim_buf_is_valid(euporie_buf) then
+    				vim.api.nvim_buf_delete(euporie_buf, { force = true })
+    			end
+    			euporie_buf = nil
+    			euporie_win = nil
+    			current_filepath = nil
+    		end,
+    	})
+
+    	-- Buffer-local keymaps
+    	vim.keymap.set("t", "<Esc><Esc>", close_euporie_win, { buffer = euporie_buf, noremap = true, silent = true })
+    	vim.keymap.set("t", "<M-n>", close_euporie_win, { buffer = euporie_buf, noremap = true, silent = true })
+
+    	vim.cmd("startinsert")
+    end
+
+    -- Auto-open .ipynb files in Euporie
+    vim.api.nvim_create_autocmd("BufReadCmd", {
+    	pattern = "*.ipynb",
+    	callback = function()
+    		local filepath = vim.fn.expand("<afile>:p")
+    		vim.cmd("bdelete")
+    		toggle_euporie_float(filepath)
+    	end,
+    })
+
+    -- Expose toggle function globally
+    _G.toggle_euporie_float = toggle_euporie_float
+  config: |
+    require("euporie").setup({
+    	path = ".",
+    	graphics_dpi = 300,
+    	graphics_height = 40,
+    })
+  health_checks:
+    - type: command
+      value: "euporie-notebook"
+      description: "euporie-notebook command available in PATH"

@@ -13,3 +13,4 @@ spec:
     - neotest
     - neotest-python
     - venv-selector
+    - euporie

@@ -275,6 +275,165 @@ spec:
 	}
 }
 
+// TestGenerateLuaBranchField_Regression254 is a regression test for GitHub issue #254.
+// The Lua generator must emit branch = "..." when spec.branch is set.
+// Without this, lazy.nvim clones from main instead of the specified branch,
+// which breaks plugins like nvim-treesitter that require the master branch.
+func TestGenerateLuaBranchField_Regression254(t *testing.T) {
+	tests := []struct {
+		name           string
+		branch         string
+		expectBranch   bool
+		expectedOutput string
+	}{
+		{
+			name:           "treesitter master branch",
+			branch:         "master",
+			expectBranch:   true,
+			expectedOutput: `branch = "master"`,
+		},
+		{
+			name:           "telescope 0.1.x branch",
+			branch:         "0.1.x",
+			expectBranch:   true,
+			expectedOutput: `branch = "0.1.x"`,
+		},
+		{
+			name:           "harpoon2 branch",
+			branch:         "harpoon2",
+			expectBranch:   true,
+			expectedOutput: `branch = "harpoon2"`,
+		},
+		{
+			name:         "empty branch omitted",
+			branch:       "",
+			expectBranch: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := &Plugin{
+				Name:   "test-plugin",
+				Repo:   "test/test-plugin",
+				Branch: tt.branch,
+			}
+
+			g := NewGenerator()
+			lua, err := g.GenerateLua(p)
+			if err != nil {
+				t.Fatalf("GenerateLua failed: %v", err)
+			}
+
+			hasBranch := strings.Contains(lua, "branch = ")
+			if tt.expectBranch && !hasBranch {
+				t.Errorf("Generated Lua missing branch field\n\nGenerated:\n%s", lua)
+			}
+			if !tt.expectBranch && hasBranch {
+				t.Errorf("Generated Lua has unexpected branch field\n\nGenerated:\n%s", lua)
+			}
+			if tt.expectBranch && !strings.Contains(lua, tt.expectedOutput) {
+				t.Errorf("Generated Lua missing %q\n\nGenerated:\n%s", tt.expectedOutput, lua)
+			}
+		})
+	}
+}
+
+// TestGenerateLuaTreesitterFromYAML_Regression254 verifies the full YAML → Plugin → Lua
+// pipeline preserves the branch field, matching the exact scenario from issue #254.
+func TestGenerateLuaTreesitterFromYAML_Regression254(t *testing.T) {
+	yamlData := `
+apiVersion: devopsmaestro.io/v1
+kind: NvimPlugin
+metadata:
+  name: treesitter
+  description: "Syntax highlighting"
+  category: syntax
+spec:
+  repo: nvim-treesitter/nvim-treesitter
+  branch: master
+  build: ":TSUpdate"
+  config: |
+    -- treesitter config
+    vim.treesitter.start()
+`
+	p, err := ParseYAML([]byte(yamlData))
+	if err != nil {
+		t.Fatalf("ParseYAML failed: %v", err)
+	}
+
+	// Verify branch survives YAML parsing
+	if p.Branch != "master" {
+		t.Fatalf("ParseYAML lost branch: got %q, want %q", p.Branch, "master")
+	}
+
+	// Verify branch appears in generated Lua
+	g := NewGenerator()
+	lua, err := g.GenerateLua(p)
+	if err != nil {
+		t.Fatalf("GenerateLua failed: %v", err)
+	}
+
+	if !strings.Contains(lua, `branch = "master"`) {
+		t.Errorf("Generated Lua missing branch = \"master\" (issue #254 regression)\n\nGenerated:\n%s", lua)
+	}
+
+	// Also verify other fields survived
+	checks := []string{
+		`"nvim-treesitter/nvim-treesitter"`,
+		`build = ":TSUpdate"`,
+		`config = function()`,
+	}
+	for _, check := range checks {
+		if !strings.Contains(lua, check) {
+			t.Errorf("Generated Lua missing: %q\n\nGenerated:\n%s", check, lua)
+		}
+	}
+}
+
+// TestGenerateLuaVersionField verifies the version field is emitted correctly.
+func TestGenerateLuaVersionField(t *testing.T) {
+	p := &Plugin{
+		Name:    "test-plugin",
+		Repo:    "test/test-plugin",
+		Version: "*",
+	}
+
+	g := NewGenerator()
+	lua, err := g.GenerateLua(p)
+	if err != nil {
+		t.Fatalf("GenerateLua failed: %v", err)
+	}
+
+	if !strings.Contains(lua, `version = "*"`) {
+		t.Errorf("Generated Lua missing version field\n\nGenerated:\n%s", lua)
+	}
+}
+
+// TestGenerateLuaBranchAndVersionMutualExclusion verifies both branch and version
+// can be set (lazy.nvim resolves precedence, we just emit both).
+func TestGenerateLuaBranchAndVersionMutualExclusion(t *testing.T) {
+	p := &Plugin{
+		Name:    "test-plugin",
+		Repo:    "test/test-plugin",
+		Branch:  "develop",
+		Version: "v1.0.0",
+	}
+
+	g := NewGenerator()
+	lua, err := g.GenerateLua(p)
+	if err != nil {
+		t.Fatalf("GenerateLua failed: %v", err)
+	}
+
+	if !strings.Contains(lua, `branch = "develop"`) {
+		t.Errorf("Generated Lua missing branch\n\nGenerated:\n%s", lua)
+	}
+	if !strings.Contains(lua, `version = "v1.0.0"`) {
+		t.Errorf("Generated Lua missing version\n\nGenerated:\n%s", lua)
+	}
+}
+
 func TestGenerateLuaWithKeymaps(t *testing.T) {
 	// Test that the 'keymaps' field generates vim.keymap.set() calls in config
 	p := &Plugin{

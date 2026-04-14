@@ -1,7 +1,10 @@
 package library
 
 import (
+	"strings"
 	"testing"
+
+	"github.com/rmkohlman/MaestroNvim/nvimops/plugin"
 )
 
 func TestLibrary(t *testing.T) {
@@ -84,5 +87,72 @@ func TestLibraryPluginContent(t *testing.T) {
 		if p.Repo == "" {
 			t.Errorf("Plugin %q has empty repo", name)
 		}
+	}
+}
+
+// TestLibraryBranchPreservation_Regression254 verifies that plugins with branch fields
+// in the embedded YAML library retain those fields after parsing.
+// Regression guard for GitHub issue #254.
+func TestLibraryBranchPreservation_Regression254(t *testing.T) {
+	lib, err := NewLibrary()
+	if err != nil {
+		t.Fatalf("NewLibrary failed: %v", err)
+	}
+
+	// Plugins that MUST have branch set in the library
+	branchExpectations := map[string]string{
+		"treesitter": "master",
+		"telescope":  "0.1.x",
+		"harpoon":    "harpoon2",
+	}
+
+	for name, expectedBranch := range branchExpectations {
+		p, ok := lib.Get(name)
+		if !ok {
+			t.Errorf("Library plugin %q not found", name)
+			continue
+		}
+
+		if p.Branch != expectedBranch {
+			t.Errorf("Plugin %q: Branch = %q, want %q (issue #254 regression)",
+				name, p.Branch, expectedBranch)
+		}
+	}
+}
+
+// TestLibraryTreesitterLuaGeneration_Regression254 is an end-to-end test that loads
+// treesitter from the embedded library and verifies the generated Lua contains branch.
+func TestLibraryTreesitterLuaGeneration_Regression254(t *testing.T) {
+	lib, err := NewLibrary()
+	if err != nil {
+		t.Fatalf("NewLibrary failed: %v", err)
+	}
+
+	ts, ok := lib.Get("treesitter")
+	if !ok {
+		t.Fatal("treesitter plugin not found in library")
+	}
+
+	if ts.Branch != "master" {
+		t.Fatalf("treesitter Branch = %q, want %q", ts.Branch, "master")
+	}
+
+	// Generate Lua and verify branch is present
+	gen := plugin.NewGenerator()
+	lua, err := gen.GenerateLua(ts)
+	if err != nil {
+		t.Fatalf("GenerateLua failed: %v", err)
+	}
+
+	if !strings.Contains(lua, `branch = "master"`) {
+		t.Errorf("treesitter Lua missing branch = \"master\" (issue #254 regression)\n\nGenerated:\n%s", lua)
+	}
+
+	// Also verify other expected fields
+	if !strings.Contains(lua, `"nvim-treesitter/nvim-treesitter"`) {
+		t.Errorf("treesitter Lua missing repo\n\nGenerated:\n%s", lua)
+	}
+	if !strings.Contains(lua, `build = ":TSUpdate"`) {
+		t.Errorf("treesitter Lua missing build\n\nGenerated:\n%s", lua)
 	}
 }

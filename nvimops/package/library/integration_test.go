@@ -202,8 +202,8 @@ func TestMaestroLanguagePackages_ExtendsResolution(t *testing.T) {
 		{
 			name:          "maestro-python",
 			packageName:   "maestro-python",
-			ownPlugins:    []string{"nvim-dap", "nvim-dap-python", "neotest", "neotest-python", "venv-selector"},
-			expectedTotal: 42,
+			ownPlugins:    []string{"nvim-dap", "nvim-dap-python", "neotest", "neotest-python", "venv-selector", "euporie"},
+			expectedTotal: 43,
 		},
 		{
 			name:          "maestro-rust",
