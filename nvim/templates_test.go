@@ -56,6 +56,39 @@ func TestInitMinimalDirect(t *testing.T) {
 	}
 }
 
+// TestInitMinimalDirect_ClipboardConditional verifies the minimal template wraps
+// the clipboard setting in a provider-availability check (fix for issue #381).
+func TestInitMinimalDirect_ClipboardConditional(t *testing.T) {
+	tmpDir := t.TempDir()
+	configPath := filepath.Join(tmpDir, "nvim")
+	if err := os.MkdirAll(configPath, 0755); err != nil {
+		t.Fatalf("Failed to create config directory: %v", err)
+	}
+
+	m := &manager{
+		configPath: configPath,
+		statusFile: filepath.Join(tmpDir, ".dvm", "nvim-status.json"),
+	}
+
+	opts := InitOptions{ConfigPath: configPath, Template: "minimal"}
+	if err := m.initMinimal(opts); err != nil {
+		t.Fatalf("initMinimal failed: %v", err)
+	}
+
+	content, err := os.ReadFile(filepath.Join(configPath, "init.lua"))
+	if err != nil {
+		t.Fatalf("Failed to read init.lua: %v", err)
+	}
+	s := string(content)
+
+	if !strings.Contains(s, "vim.fn.has('clipboard')") {
+		t.Error("minimal template init.lua missing clipboard provider conditional guard")
+	}
+	if strings.Contains(s, "\nvim.opt.clipboard") {
+		t.Error("minimal template contains unconditional top-level vim.opt.clipboard assignment")
+	}
+}
+
 // TestInitFromTemplate tests the template dispatcher
 func TestInitFromTemplate(t *testing.T) {
 	tests := []struct {

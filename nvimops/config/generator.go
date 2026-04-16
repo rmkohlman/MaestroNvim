@@ -289,7 +289,15 @@ func (g *Generator) writeOption(lua *strings.Builder, key string, val interface{
 		// Handle special cases like clipboard:append
 		if strings.HasPrefix(v, "append:") {
 			appendVal := strings.TrimPrefix(v, "append:")
-			lua.WriteString(fmt.Sprintf("opt.%s:append(\"%s\")\n", key, appendVal))
+			if key == "clipboard" {
+				// Conditionally set clipboard to gracefully handle missing providers in containers
+				lua.WriteString(fmt.Sprintf("-- Use system clipboard when a provider is available, otherwise use internal registers\n"))
+				lua.WriteString(fmt.Sprintf("if vim.fn.has('clipboard') == 1 or vim.fn.executable('xclip') == 1 or vim.fn.executable('xsel') == 1 or vim.fn.executable('pbcopy') == 1 or vim.fn.executable('wl-copy') == 1 or (vim.env.SSH_TTY and vim.fn.has('nvim-0.10') == 1) then\n"))
+				lua.WriteString(fmt.Sprintf("  opt.%s:append(\"%s\")\n", key, appendVal))
+				lua.WriteString("end\n")
+			} else {
+				lua.WriteString(fmt.Sprintf("opt.%s:append(\"%s\")\n", key, appendVal))
+			}
 		} else {
 			lua.WriteString(fmt.Sprintf("opt.%s = \"%s\"\n", key, v))
 		}

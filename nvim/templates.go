@@ -100,7 +100,10 @@ vim.g.maplocalleader = "\\"
 vim.opt.number = true
 vim.opt.relativenumber = true
 vim.opt.mouse = 'a'
-vim.opt.clipboard = 'unnamedplus'
+-- Use system clipboard when a provider is available, otherwise use internal registers
+if vim.fn.has('clipboard') == 1 or vim.fn.executable('xclip') == 1 or vim.fn.executable('xsel') == 1 or vim.fn.executable('pbcopy') == 1 or vim.fn.executable('wl-copy') == 1 or (vim.env.SSH_TTY and vim.fn.has('nvim-0.10') == 1) then
+  vim.opt.clipboard = 'unnamedplus'
+end
 vim.opt.ignorecase = true
 vim.opt.smartcase = true
 vim.opt.hlsearch = true
