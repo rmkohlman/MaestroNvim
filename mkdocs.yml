@@ -69,13 +69,16 @@ nav:
     - Plugin Library: plugins/library.md
     - Plugin Packages: plugins/packages.md
     - Plugin Sources: plugins/sources.md
+    - OpenCode Integration: plugins/opencode.md
   - Themes:
     - Overview: themes/overview.md
+    - Quick Start: themes/quickstart.md
     - Theme Library: themes/library.md
     - CoolNight Collection: themes/coolnight.md
     - Parametric Generator: themes/parametric.md
   - Configuration:
     - Neovim Core Config: configuration/core-config.md
+    - Plugin System: configuration/plugin-system.md
     - YAML Schema: configuration/yaml-schema.md
   - Commands Reference: commands.md
   - YAML Reference:

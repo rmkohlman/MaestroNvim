@@ -1,11 +1,9 @@
 # NvimPlugin YAML Reference
 
-**Kind:** `NvimPlugin`
+**Kind:** `NvimPlugin`  
 **APIVersion:** `devopsmaestro.io/v1`
 
-An NvimPlugin defines a Neovim plugin configuration in YAML. Apply with `nvp apply -f <file>` and export with `nvp get <name> -o yaml`.
-
----
+An NvimPlugin represents a Neovim plugin configuration that can be shared and applied across workspaces.
 
 ## Full Example
 
@@ -32,7 +30,7 @@ spec:
   priority: 1000
   event: ["VeryLazy"]
   ft: ["lua", "vim"]
-  cmd: ["Telescope"]
+  cmd: ["Telescope", "Tele"]
   keys:
     - key: "<leader>ff"
       mode: "n"
@@ -46,6 +44,10 @@ spec:
       mode: ["n", "v"]
       action: "<cmd>Telescope buffers<cr>"
       desc: "Find buffers"
+    - key: "<leader>fh"
+      mode: "n"
+      action: "<cmd>Telescope help_tags<cr>"
+      desc: "Find help"
   dependencies:
     - "nvim-lua/plenary.nvim"
     - repo: "nvim-tree/nvim-web-devicons"
@@ -63,77 +65,117 @@ spec:
           width = 0.95,
           height = 0.85,
           preview_cutoff = 120,
+          horizontal = {
+            preview_width = 0.6,
+          },
+        },
+        mappings = {
+          i = {
+            ["<C-u>"] = false,
+            ["<C-d>"] = false,
+          },
+        },
+      },
+      pickers = {
+        find_files = {
+          theme = "dropdown",
+          previewer = false,
+        },
+        buffers = {
+          theme = "dropdown",
+          previewer = false,
+        },
+      },
+      extensions = {
+        fzf = {
+          fuzzy = true,
+          override_generic_sorter = true,
+          override_file_sorter = true,
+          case_mode = "smart_case",
         },
       },
     })
+    
+    -- Load extensions
     require('telescope').load_extension('fzf')
   init: |
+    -- Set up before plugin loads
     vim.g.telescope_theme = 'dropdown'
   opts:
     defaults:
-      prompt_prefix: "> "
-      selection_caret: "> "
+      prompt_prefix: "🔍 "
+      selection_caret: "👉 "
+      multi_icon: "📌"
       path_display: ["truncate"]
+    extensions:
+      fzf:
+        fuzzy: true
+        override_generic_sorter: true
+        override_file_sorter: true
 ```
-
----
 
 ## Field Reference
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `apiVersion` | string | Yes | Must be `devopsmaestro.io/v1` |
-| `kind` | string | Yes | Must be `NvimPlugin` |
-| `metadata.name` | string | Yes | Unique identifier for the plugin |
-| `metadata.description` | string | No | Plugin description |
-| `metadata.category` | string | No | Plugin category |
-| `metadata.tags` | array | No | Tags for filtering |
-| `metadata.labels` | object | No | Key-value labels |
-| `metadata.annotations` | object | No | Key-value annotations |
-| `spec.repo` | string | Yes | GitHub repository (`owner/repo`) |
-| `spec.branch` | string | No | Git branch |
-| `spec.version` | string | No | Git tag or version |
-| `spec.lazy` | boolean | No | Enable lazy loading |
-| `spec.priority` | integer | No | Load priority (higher = earlier) |
-| `spec.event` | array | No | Load on these Neovim events |
-| `spec.ft` | array | No | Load on these filetypes |
-| `spec.cmd` | array | No | Load when these commands are used |
-| `spec.keys` | array | No | Key mappings (also triggers load) |
-| `spec.dependencies` | array | No | Plugin dependencies |
-| `spec.build` | string | No | Build command after install |
-| `spec.config` | string | No | Lua configuration code (runs after load) |
-| `spec.init` | string | No | Lua initialization code (runs before load) |
-| `spec.opts` | object | No | Options passed to plugin's setup function |
-
----
+| `apiVersion` | string | ✅ | Must be `devopsmaestro.io/v1` |
+| `kind` | string | ✅ | Must be `NvimPlugin` |
+| `metadata.name` | string | ✅ | Unique name for the plugin |
+| `metadata.description` | string | ❌ | Plugin description |
+| `metadata.category` | string | ❌ | Plugin category |
+| `metadata.tags` | array | ❌ | Tags for organization |
+| `metadata.labels` | object | ❌ | Key-value labels |
+| `metadata.annotations` | object | ❌ | Key-value annotations |
+| `spec.repo` | string | ✅ | GitHub repository |
+| `spec.branch` | string | ❌ | Git branch |
+| `spec.version` | string | ❌ | Git tag/version |
+| `spec.priority` | integer | ❌ | Load priority (higher = earlier) |
+| `spec.lazy` | boolean | ❌ | Enable lazy loading |
+| `spec.enabled` | boolean | ❌ | Enable or disable the plugin (default: `true`; omit unless disabling) |
+| `spec.event` | string or array | ❌ | Load on events |
+| `spec.ft` | string or array | ❌ | Load on filetypes |
+| `spec.cmd` | string or array | ❌ | Load on commands |
+| `spec.keys` | array | ❌ | Load on key mappings (also triggers lazy load) |
+| `spec.dependencies` | array | ❌ | Plugin dependencies (strings or objects) |
+| `spec.build` | string | ❌ | Build command |
+| `spec.config` | string | ❌ | Configuration Lua code (runs after load) |
+| `spec.init` | string | ❌ | Initialization Lua code (runs before load) |
+| `spec.opts` | object | ❌ | Options passed directly to the plugin's `setup()` |
+| `spec.keymaps` | array | ❌ | Additional key mappings (not lazy-load triggers) |
+| `spec.health_checks` | array | ❌ | Health checks to verify plugin is working |
 
 ## Field Details
 
 ### metadata.name (required)
+The unique identifier for the plugin.
 
-Unique identifier for the plugin. Used as the filename under `~/.nvp/plugins/`.
-
-**Conventions:**
+**Naming conventions:**
 - Use the plugin's common name: `telescope`, `lspconfig`, `treesitter`
-- For customized configs: `telescope-custom`, `lsp-golang`
+- Be descriptive for custom configs: `telescope-custom`, `lsp-golang`
 
 ### metadata.category (optional)
-
-Category for organization and library filtering.
+Plugin category for organization.
 
 **Common categories:**
-- `navigation` - File and buffer navigation
+- `navigation` - File/buffer navigation
 - `lsp` - Language Server Protocol
 - `completion` - Code completion
 - `syntax` - Syntax highlighting
 - `git` - Git integration
 - `ui` - User interface enhancements
-- `editing` - Text editing
+- `editing` - Text editing features
 - `debugging` - Debug support
 - `testing` - Test integration
 
-### spec.repo (required)
+### metadata.tags (optional)
+Tags for filtering and searching plugins.
 
+```yaml
+metadata:
+  tags: ["fuzzy-finder", "telescope", "navigation", "files", "grep"]
+```
+
+### spec.repo (required)
 GitHub repository in `owner/repo` format.
 
 ```yaml
@@ -142,80 +184,76 @@ spec:
 ```
 
 ### spec.branch and spec.version (optional)
-
-Pin to a specific branch or version tag.
+Git branch or version/tag to use.
 
 ```yaml
 spec:
-  branch: "master"      # Use a specific branch
+  branch: "master"      # Use specific branch
   # OR
-  version: "0.1.4"      # Use a specific tag
+  version: "0.1.4"      # Use specific tag/version
 ```
 
 ### spec.priority (optional)
-
-Load priority. Higher numbers load earlier. Useful for colorschemes that must load before other plugins.
+Load priority for plugins. Higher numbers load earlier.
 
 ```yaml
 spec:
-  priority: 1000
+  priority: 1000        # Load early (useful for colorschemes)
 ```
 
-### Lazy Loading
+### Lazy Loading Configuration
 
 #### spec.lazy (optional)
+Enable lazy loading for the plugin.
 
 ```yaml
 spec:
-  lazy: true
+  lazy: true            # Enable lazy loading
 ```
 
 #### spec.event (optional)
-
-Load on Neovim events:
+Load plugin on specific events.
 
 ```yaml
 spec:
-  event: ["BufReadPre", "BufNewFile"]
+  event: ["BufReadPre", "BufNewFile"]  # Load on file open
   # OR
-  event: ["VeryLazy"]
+  event: ["VeryLazy"]                  # Load after startup
 ```
 
 **Common events:**
-- `VeryLazy` - After startup
+- `VeryLazy` - After startup completion
 - `BufReadPre` - Before reading a buffer
-- `BufNewFile` - On new file
+- `BufNewFile` - On new file creation
 - `InsertEnter` - Entering insert mode
+- `CmdlineEnter` - Entering command line
 
 #### spec.ft (optional)
-
-Load for specific filetypes:
+Load plugin on specific filetypes.
 
 ```yaml
 spec:
-  ft: ["go", "lua", "python"]
+  ft: ["go", "lua", "python"]          # Load for specific languages
 ```
 
 #### spec.cmd (optional)
-
-Load when specific commands are used:
+Load plugin when specific commands are used.
 
 ```yaml
 spec:
-  cmd: ["Telescope", "Tele"]
+  cmd: ["Telescope", "Tele"]           # Load on command usage
 ```
 
 #### spec.keys (optional)
-
-Load on key mapping press. Also registers the key mappings.
+Load plugin on specific key mappings.
 
 ```yaml
 spec:
   keys:
-    - key: "<leader>ff"
-      mode: "n"                        # n, i, v, x, o, c
-      action: "<cmd>Telescope find_files<cr>"
-      desc: "Find files"
+    - key: "<leader>ff"                # Key combination
+      mode: "n"                        # Mode: n, i, v, x, o, c
+      action: "<cmd>Telescope find_files<cr>"  # Action to execute
+      desc: "Find files"               # Description
     - key: "<C-p>"
       mode: ["n", "i"]                 # Multiple modes
       action: "<cmd>Telescope find_files<cr>"
@@ -223,39 +261,37 @@ spec:
 ```
 
 ### spec.dependencies (optional)
-
-Plugin dependencies loaded before this plugin.
+Plugin dependencies that must be loaded first.
 
 ```yaml
 spec:
   dependencies:
     # Simple string format
     - "nvim-lua/plenary.nvim"
-
+    
     # Detailed format
     - repo: "nvim-tree/nvim-web-devicons"
-      build: ""
-      config: false
+      build: ""                        # No build command
+      config: false                    # Don't auto-configure
     - repo: "nvim-telescope/telescope-fzf-native.nvim"
-      build: "make"
+      build: "make"                    # Build with make
+      version: "1.0.0"                # Specific version
 ```
 
 ### spec.build (optional)
-
-Build command run after plugin installation or update.
+Build command to run after plugin installation/update.
 
 ```yaml
 spec:
-  build: "make"             # Shell command
+  build: "make"                        # Run make
   # OR
-  build: ":TSUpdate"        # Neovim command
-  # OR
-  build: "npm install"      # Node command
+  build: ":TSUpdate"                   # Neovim command
+  # OR  
+  build: "npm install"                 # Shell command
 ```
 
 ### spec.config (optional)
-
-Lua code executed after the plugin loads.
+Lua configuration code executed after plugin loads.
 
 ```yaml
 spec:
@@ -263,41 +299,94 @@ spec:
     require('telescope').setup({
       defaults = {
         file_ignore_patterns = {"node_modules"},
+        layout_strategy = 'horizontal',
       }
     })
 ```
 
 ### spec.init (optional)
-
-Lua code executed before the plugin loads.
+Lua initialization code executed before plugin loads.
 
 ```yaml
 spec:
   init: |
     vim.g.telescope_theme = 'dropdown'
+    vim.g.telescope_debug = false
 ```
 
 ### spec.opts (optional)
-
 Options passed directly to the plugin's setup function.
 
 ```yaml
 spec:
   opts:
     defaults:
-      prompt_prefix: "> "
+      prompt_prefix: "🔍 "
+      selection_caret: "👉 "
     pickers:
       find_files:
         theme: "dropdown"
 ```
 
----
-
-## Examples by Category
-
-### Navigation Plugin
+### spec.keymaps (optional)
+Additional key mappings registered after the plugin loads. Unlike `spec.keys`, entries here do **not** trigger lazy loading — the plugin must already be loaded.
 
 ```yaml
+spec:
+  keymaps:
+    - key: "<leader>tt"
+      mode: "n"
+      action: "<cmd>ToggleTerm<cr>"
+      desc: "Toggle terminal"
+    - key: "<C-\\>"
+      mode: ["n", "t"]
+      action: "<cmd>ToggleTerm<cr>"
+      desc: "Toggle terminal (normal/terminal mode)"
+```
+
+### spec.enabled (optional)
+Enable or disable the plugin. Defaults to `true`. Only include this field when explicitly disabling a plugin — omitting it is equivalent to `true`.
+
+```yaml
+spec:
+  enabled: false   # Disable this plugin
+```
+
+### spec.health_checks (optional)
+Health checks to verify the plugin is correctly installed and functional. Run with `nvp health`.
+
+```yaml
+spec:
+  health_checks:
+    - type: lua_module     # Check a Lua module loads via require()
+      value: "telescope"
+      description: "Telescope core module"
+    - type: command        # Check a Neovim command exists
+      value: "Telescope"
+      description: "Telescope command available"
+    - type: treesitter     # Check a treesitter parser is installed
+      value: "lua"
+      description: "Lua treesitter parser"
+    - type: lsp            # Check an LSP server is configured
+      value: "gopls"
+      description: "Go LSP server"
+```
+
+**Health check types:**
+
+| Type | Checks |
+|------|--------|
+| `lua_module` | Lua module is loadable via `require()` |
+| `command` | Neovim command exists |
+| `treesitter` | Treesitter parser is installed |
+| `lsp` | LSP server is configured |
+
+## Plugin Categories and Examples
+
+### Navigation Plugins
+
+```yaml
+# Telescope - Fuzzy finder
 apiVersion: devopsmaestro.io/v1
 kind: NvimPlugin
 metadata:
@@ -308,12 +397,24 @@ spec:
   keys:
     - key: "<leader>ff"
       action: "<cmd>Telescope find_files<cr>"
-      desc: "Find files"
+
+# Oil.nvim - File explorer
+apiVersion: devopsmaestro.io/v1
+kind: NvimPlugin
+metadata:
+  name: oil
+  category: navigation
+spec:
+  repo: "stevearc/oil.nvim"
+  keys:
+    - key: "-"
+      action: "<cmd>Oil<cr>"
 ```
 
-### LSP Plugin
+### LSP Plugins
 
 ```yaml
+# LSP Config
 apiVersion: devopsmaestro.io/v1
 kind: NvimPlugin
 metadata:
@@ -322,11 +423,22 @@ metadata:
 spec:
   repo: "neovim/nvim-lspconfig"
   event: ["BufReadPre", "BufNewFile"]
+  
+# Mason (LSP installer)
+apiVersion: devopsmaestro.io/v1
+kind: NvimPlugin
+metadata:
+  name: mason
+  category: lsp
+spec:
+  repo: "williamboman/mason.nvim"
+  cmd: ["Mason", "MasonInstall"]
 ```
 
-### Completion Plugin
+### Completion Plugins
 
 ```yaml
+# nvim-cmp
 apiVersion: devopsmaestro.io/v1
 kind: NvimPlugin
 metadata:
@@ -341,9 +453,10 @@ spec:
     - "hrsh7th/cmp-path"
 ```
 
-### Language-Specific Plugin
+### Language-Specific Plugins
 
 ```yaml
+# Go plugin
 apiVersion: devopsmaestro.io/v1
 kind: NvimPlugin
 metadata:
@@ -353,44 +466,87 @@ metadata:
 spec:
   repo: "fatih/vim-go"
   ft: ["go"]
+  
+# Rust plugin  
+apiVersion: devopsmaestro.io/v1
+kind: NvimPlugin
+metadata:
+  name: rust-tools
+  category: language
+  tags: ["rust"]
+spec:
+  repo: "simrat39/rust-tools.nvim"
+  ft: ["rust"]
 ```
-
----
 
 ## Usage Examples
 
+### Create Custom Plugin
+
 ```bash
-# Apply from a YAML file
-nvp apply -f my-plugin.yaml
+# From YAML file
+dvm apply -f my-plugin.yaml
 
-# Apply from GitHub
-nvp apply -f github:rmkohlman/nvim-yaml-plugins/plugins/telescope.yaml
+# From URL
+dvm apply -f https://plugins.example.com/telescope.yaml
 
-# List installed plugins
-nvp list
-
-# Get plugin details
-nvp get telescope -o yaml
-
-# Export a plugin
-nvp get telescope -o yaml > telescope-config.yaml
+# From GitHub
+dvm apply -f github:user/configs/telescope.yaml
 ```
 
----
+### List Plugins
+
+```bash
+# List all plugins
+dvm get nvim plugins
+
+# List by category
+dvm get nvim plugins --category navigation
+
+# Search plugins
+dvm get nvim plugins --name "*telescope*"
+```
+
+### Export Plugin
+
+```bash
+# Export to YAML
+dvm get nvim plugin telescope -o yaml
+
+# Export for sharing
+dvm get nvim plugin my-custom-config -o yaml > telescope-config.yaml
+```
+
+### Use in Workspace
+
+```yaml
+# Reference in workspace
+apiVersion: devopsmaestro.io/v1
+kind: Workspace
+metadata:
+  name: dev
+  app: my-app
+spec:
+  nvim:
+    plugins:
+      - telescope
+      - lspconfig
+      - nvim-cmp
+```
+
+## Related Resources
+
+- [Workspace](https://rmkohlman.github.io/devopsmaestro/reference/workspace/) - Use plugins in workspaces
+- [NvimPackage](nvim-package.md) - Plugin collections
+- [NvimTheme](nvim-theme.md) - Theme plugins
 
 ## Validation Rules
 
 - `metadata.name` must be unique across all plugins
-- `spec.repo` must be in `owner/repo` format
-- `spec.keys[].mode` must be valid Neovim mode(s): `n`, `i`, `v`, `x`, `o`, `c`
+- `metadata.name` must be a valid DNS subdomain
+- `spec.repo` must be a valid GitHub repository format (`owner/repo`)
+- `spec.keys[].mode` must be valid Neovim mode(s)
 - `spec.config` and `spec.init` must be valid Lua code
+- `spec.dependencies` must reference valid repositories
 - `spec.priority` must be a positive integer
-
----
-
-## Related
-
-- [Plugins Overview](../plugins/overview.md)
-- [Plugin Library](../plugins/library.md)
-- [Plugin Packages](../plugins/packages.md) and [NvimPackage Reference](nvim-package.md)
-- [NvimTheme Reference](nvim-theme.md)
+- Plugin names must not conflict with built-in plugins

@@ -1,11 +1,9 @@
 # NvimTheme YAML Reference
 
-**Kind:** `NvimTheme`
+**Kind:** `NvimTheme`  
 **APIVersion:** `devopsmaestro.io/v1`
 
-An NvimTheme defines a Neovim colorscheme configuration in YAML. Apply with `nvp apply -f <file>` and export with `nvp theme get <name> -o yaml`.
-
----
+An NvimTheme represents a Neovim colorscheme theme that can be applied and shared via Infrastructure as Code.
 
 ## Full Example
 
@@ -17,13 +15,6 @@ metadata:
   description: "CoolNight Synthwave - Retro neon vibes with deep purples and electric blues"
   author: "devopsmaestro"
   category: "dark"
-  labels:
-    collection: coolnight
-    style: synthwave
-    brightness: dark
-  annotations:
-    version: "1.0.0"
-    last-updated: "2026-02-19"
 spec:
   plugin:
     repo: "rmkohlman/coolnight.nvim"
@@ -55,178 +46,196 @@ spec:
     bold_keywords: false
     underline_errors: true
     transparent_background: false
-    custom_highlights:
-      - group: "Keyword"
-        style: "bold"
-        fg: "#bd93f9"
-      - group: "String"
-        style: "italic"
-        fg: "#f1fa8c"
-      - group: "Function"
-        style: "bold"
-        fg: "#50fa7b"
 ```
-
----
 
 ## Field Reference
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `apiVersion` | string | Yes | Must be `devopsmaestro.io/v1` |
-| `kind` | string | Yes | Must be `NvimTheme` |
-| `metadata.name` | string | Yes | Unique identifier for the theme |
-| `metadata.description` | string | No | Theme description |
-| `metadata.author` | string | No | Theme author |
-| `metadata.category` | string | No | Theme category: `dark`, `light`, `monochrome` |
-| `metadata.labels` | object | No | Key-value labels for organization |
-| `metadata.annotations` | object | No | Key-value annotations |
-| `spec.plugin` | object | Yes | Plugin repository information |
-| `spec.plugin.repo` | string | Yes | GitHub repository (`owner/repo`) |
-| `spec.plugin.branch` | string | No | Git branch |
-| `spec.plugin.tag` | string | No | Git tag or version |
-| `spec.style` | string | No | Theme variant (plugin-specific) |
-| `spec.transparent` | boolean | No | Enable transparent background |
-| `spec.colors` | object | No | Color overrides |
-| `spec.options` | object | No | Plugin-specific options |
-
----
+| `apiVersion` | string | ✅ | Must be `devopsmaestro.io/v1` |
+| `kind` | string | ✅ | Must be `NvimTheme` |
+| `metadata.name` | string | ✅ | Unique name for the theme |
+| `metadata.description` | string | ❌ | Theme description |
+| `metadata.author` | string | ❌ | Theme author |
+| `metadata.category` | string | ❌ | Theme category (dark/light/both) |
+| `spec.plugin` | object | ❌ | Plugin repository information (omit for standalone themes) |
+| `spec.plugin.repo` | string | ❌ | GitHub repository (required for plugin-based themes) |
+| `spec.plugin.branch` | string | ❌ | Git branch |
+| `spec.plugin.tag` | string | ❌ | Git tag/version |
+| `spec.style` | string | ❌ | Theme style/variant (plugin-specific) |
+| `spec.transparent` | boolean | ❌ | Enable transparent background |
+| `spec.colors` | object | ❌ | Semantic color overrides (hex values) |
+| `spec.promptColors` | object | ❌ | Starship prompt segment color overrides (hex values) |
+| `spec.options` | object | ❌ | Plugin-specific key-value options |
 
 ## Field Details
 
 ### metadata.name (required)
+The unique identifier for the theme.
 
-Unique identifier for the theme.
-
-**Conventions:**
+**Naming conventions:**
 - Use kebab-case: `coolnight-synthwave`
-- Include the collection name: `coolnight-ocean`, `tokyonight-night`
+- Include collection: `coolnight-ocean`, `tokyonight-night`
+- Be descriptive: `gruvbox-material-dark`
 
 ### metadata.category (optional)
-
-Theme category for organization.
+Theme category for organization and filtering.
 
 **Valid values:**
-- `dark` - Dark background theme
-- `light` - Light background theme
+- `dark` - Dark theme
+- `light` - Light theme  
+- `both` - Theme with both variants
 - `monochrome` - Black and white theme
 
-### spec.plugin (required)
-
-The Neovim plugin that provides the colorscheme.
+### spec.plugin (optional)
+Plugin repository that provides the colorscheme. Omit entirely for standalone themes — themes without a plugin repo apply colors directly via `vim.api.nvim_set_hl()`.
 
 ```yaml
 spec:
   plugin:
-    repo: "folke/tokyonight.nvim"      # required
-    branch: "main"                     # optional
-    tag: "v1.0.0"                     # optional
+    repo: "folke/tokyonight.nvim"      # GitHub repository (required for plugin-based themes)
+    branch: "main"                     # Git branch (optional)
+    tag: "v1.0.0"                     # Git tag/version (optional)
 ```
 
 **Popular theme plugins:**
-- `folke/tokyonight.nvim`
-- `catppuccin/nvim`
-- `ellisonleao/gruvbox.nvim`
-- `shaunsingh/nord.nvim`
-- `Mofiqul/dracula.nvim`
+- `folke/tokyonight.nvim` - Tokyo Night themes
+- `catppuccin/nvim` - Catppuccin themes  
+- `ellisonleao/gruvbox.nvim` - Gruvbox themes
+- `shaunsingh/nord.nvim` - Nord theme
+- `Mofiqul/dracula.nvim` - Dracula theme
 
 ### spec.style (optional)
-
-Theme variant name. Values are plugin-specific.
+Theme style or variant name (plugin-specific).
 
 ```yaml
-# Tokyo Night
+# Tokyo Night variants
 spec:
-  style: "night"       # night, storm, day, moon
+  style: "night"    # or "storm", "day", "moon"
 
-# Catppuccin
+# Catppuccin variants  
 spec:
-  style: "mocha"       # mocha, macchiato, frappe, latte
+  style: "mocha"    # or "macchiato", "frappe", "latte"
 
-# Gruvbox
+# Gruvbox variants
 spec:
-  style: "dark"        # dark, light
+  style: "dark"     # or "light"
 ```
 
 ### spec.transparent (optional)
-
-Enable a transparent background for terminal integration.
+Enable transparent background for terminal integration.
 
 ```yaml
 spec:
-  transparent: true
+  transparent: true   # Enable transparent background
 ```
 
 ### spec.colors (optional)
-
-Override semantic color values. All colors must be valid hex (`#rrggbb`).
+Custom color overrides for semantic color names.
 
 ```yaml
 spec:
   colors:
-    bg: "#1a1b26"           # Background
-    fg: "#c0caf5"           # Foreground
-    primary: "#7aa2f7"      # Primary accent
-    secondary: "#bb9af7"    # Secondary accent
-    accent: "#7dcfff"       # Tertiary accent
-    error: "#f7768e"        # Error messages
-    warning: "#e0af68"      # Warning messages
-    info: "#7dcfff"         # Info messages
-    hint: "#1abc9c"         # Hint messages
-    selection: "#33467c"    # Selection highlight
-    comment: "#565f89"      # Comments
-    cursor: "#c0caf5"       # Cursor color
-    line_number: "#3b4261"  # Line numbers
-    line_highlight: "#1f2335"
-    popup_bg: "#1f2335"
-    popup_border: "#27a1b9"
-    statusline_bg: "#1f2335"
-    tabline_bg: "#1a1b26"
+    # Basic colors
+    bg: "#1a1b26"           # Background color
+    fg: "#c0caf5"           # Foreground color
+    
+    # Semantic colors
+    primary: "#7aa2f7"       # Primary accent
+    secondary: "#bb9af7"     # Secondary accent
+    accent: "#7dcfff"        # Tertiary accent
+    
+    # Status colors
+    error: "#f7768e"         # Error messages
+    warning: "#e0af68"       # Warning messages
+    info: "#7dcfff"          # Info messages
+    hint: "#1abc9c"          # Hint messages
+    success: "#9ece6a"       # Success messages
+    
+    # UI colors
+    selection: "#33467c"     # Selection highlight
+    comment: "#565f89"       # Comments
+    cursor: "#c0caf5"        # Cursor color
+    line_number: "#3b4261"   # Line numbers
+    line_highlight: "#1f2335" # Current line highlight
+    
+    # Popup/float colors
+    popup_bg: "#1f2335"      # Popup background
+    popup_border: "#27a1b9"  # Popup border
+    
+    # Statusline colors
+    statusline_bg: "#1f2335" # Statusline background
+    statusline_fg: "#c0caf5" # Statusline foreground
+    
+    # Tabline colors
+    tabline_bg: "#1a1b26"    # Tabline background
+    tabline_fg: "#565f89"    # Inactive tabs
+    tabline_sel: "#7aa2f7"   # Active tab
 ```
 
 ### spec.options (optional)
-
-Plugin-specific options and custom highlight groups.
+Plugin-specific key-value options passed to the theme's `setup()` call. Keys and valid values are entirely plugin-defined.
 
 ```yaml
 spec:
   options:
+    # Typography options (plugin-specific — these are examples for common themes)
     italic_comments: true
     bold_keywords: false
     underline_errors: true
+    
+    # Background options
     transparent_background: false
     dim_inactive: false
-    custom_highlights:
-      - group: "Keyword"
-        style: "bold"         # bold, italic, underline
-        fg: "#bd93f9"
-        bg: "#282a36"         # optional
-      - group: "String"
-        style: "italic"
-        fg: "#f1fa8c"
+    
+    # Plugin integrations (Catppuccin example)
     integrations:
       telescope: true
+      nvim_tree: true
       gitsigns: true
       lualine: true
 ```
 
----
+### spec.promptColors (optional)
+Color overrides for Starship prompt segment colors. These are separate from the Neovim editor colors in `spec.colors` and are applied when the theme is used with a Starship-based terminal prompt.
+
+```yaml
+spec:
+  promptColors:
+    directory: "#7aa2f7"    # Prompt directory segment color
+    git_branch: "#9ece6a"   # Git branch segment color
+    username: "#bb9af7"     # Username segment color
+```
 
 ## Theme Collections
 
-### CoolNight Variants (built-in)
+### CoolNight Collection
 
-All 21 CoolNight themes are embedded and immediately available:
+DevOpsMaestro includes 21 CoolNight theme variants:
 
-```bash
-nvp theme use coolnight-ocean       # 210° blue
-nvp theme use coolnight-synthwave   # 280° purple
-nvp theme use coolnight-matrix      # 120° green
+```yaml
+# Ocean (default)
+metadata:
+  name: coolnight-ocean
+spec:
+  plugin:
+    repo: "rmkohlman/coolnight.nvim"
+  style: "ocean"
+
+# Synthwave  
+metadata:
+  name: coolnight-synthwave
+spec:
+  style: "synthwave"
+
+# Arctic
+metadata:
+  name: coolnight-arctic
+spec:
+  style: "arctic"
 ```
 
-See [CoolNight Collection](../themes/coolnight.md) for all 21 variants.
-
-### Popular Themes (built-in)
+### Popular Themes
 
 ```yaml
 # Tokyo Night
@@ -250,63 +259,123 @@ spec:
   plugin:
     repo: "catppuccin/nvim"
   style: "mocha"
-```
 
----
+# Gruvbox
+apiVersion: devopsmaestro.io/v1
+kind: NvimTheme
+metadata:
+  name: gruvbox-dark
+  category: dark
+spec:
+  plugin:
+    repo: "ellisonleao/gruvbox.nvim"
+  style: "dark"
+```
 
 ## Usage Examples
 
+### Create Custom Theme
+
 ```bash
-# Apply a custom theme
-nvp apply -f my-theme.yaml
+# From YAML file
+dvm apply -f my-theme.yaml
 
-# Use a theme
-nvp theme use my-custom-theme
+# From URL
+dvm apply -f https://themes.example.com/synthwave.yaml
 
-# Export a theme to YAML
-nvp theme get coolnight-ocean -o yaml > ocean-theme.yaml
-
-# Preview a theme in terminal
-nvp theme preview coolnight-ocean
-
-# List all themes
-nvp theme list
-
-# Generate Lua files with active theme
-nvp generate
+# From GitHub
+dvm apply -f github:user/themes/my-theme.yaml
 ```
 
----
+### Set Theme
+
+```bash
+# Set at workspace level
+dvm set theme coolnight-synthwave --workspace dev
+
+# Set at app level
+dvm set theme tokyonight-night --app my-api
+
+# Set at domain level  
+dvm set theme gruvbox-dark --domain backend
+```
+
+### List Themes
+
+```bash
+# List all available themes
+dvm get nvim themes
+
+# List themes by category
+dvm get nvim themes --category dark
+
+# Search themes
+dvm get nvim themes --name "*coolnight*"
+```
+
+### Export Theme
+
+```bash
+# Export to YAML
+dvm get nvim theme coolnight-ocean -o yaml
+
+# Export for sharing
+dvm get nvim theme my-custom-theme -o yaml > my-theme.yaml
+```
 
 ## Color Guidelines
 
-Use semantic color names for maintainability:
+### Color Naming
+
+Use semantic color names for better maintainability:
 
 ```yaml
 colors:
-  primary: "#7aa2f7"      # Good - semantic name
-  error: "#f7768e"        # Good - semantic name
+  # Prefer semantic names
+  primary: "#7aa2f7"      # ✅ Good
+  error: "#f7768e"        # ✅ Good
+  
+  # Avoid generic names  
+  blue: "#7aa2f7"         # ❌ Avoid
+  red: "#f7768e"          # ❌ Avoid
 ```
 
-Ensure sufficient contrast:
-- Background and foreground should meet WCAG AA (4.5:1 minimum)
-- Keep semantic colors consistent: errors always red tones, warnings always yellow
+### Color Accessibility
 
----
+Ensure sufficient contrast for accessibility:
+
+```yaml
+colors:
+  bg: "#1a1b26"           # Dark background
+  fg: "#c0caf5"           # Light foreground (good contrast)
+  comment: "#565f89"      # Muted but readable
+```
+
+### Color Consistency
+
+Maintain consistent color usage across themes:
+
+```yaml
+colors:
+  error: "#ff5555"        # Always red tones
+  warning: "#f1fa8c"      # Always yellow tones
+  info: "#8be9fd"         # Always blue/cyan tones
+  success: "#50fa7b"      # Always green tones
+```
+
+## Related Resources
+
+- [Workspace](https://rmkohlman.github.io/devopsmaestro/reference/workspace/) - Apply themes to workspaces
+- [App](https://rmkohlman.github.io/devopsmaestro/reference/app/) - Set default app themes
+- [Domain](https://rmkohlman.github.io/devopsmaestro/reference/domain/) - Set domain-wide themes
+- [Ecosystem](https://rmkohlman.github.io/devopsmaestro/reference/ecosystem/) - Set ecosystem themes
 
 ## Validation Rules
 
-- `metadata.name` must be unique across user themes
-- `metadata.category` must be `dark`, `light`, or `monochrome`
-- `spec.plugin.repo` must be in `owner/repo` format
-- All `spec.colors.*` values must be valid hex colors (`#rrggbb` or `#rrggbbaa`)
-
----
-
-## Related
-
-- [Themes Overview](../themes/overview.md)
-- [Theme Library](../themes/library.md)
-- [CoolNight Collection](../themes/coolnight.md)
-- [Parametric Generator](../themes/parametric.md)
-- [NvimPlugin Reference](nvim-plugin.md)
+- `metadata.name` must be unique across all themes
+- `metadata.name` must be a valid DNS subdomain
+- `spec.plugin.repo` must be a valid GitHub repository format
+- `spec.colors.*` must be valid hex colors (`#rrggbb` or `#rgb`)
+- `spec.promptColors.*` must be valid hex colors (`#rrggbb` or `#rgb`)
+- Standalone themes (no `spec.plugin.repo`) must define `spec.colors`
+- Theme names must not conflict with built-in themes

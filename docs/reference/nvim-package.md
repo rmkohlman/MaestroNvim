@@ -1,11 +1,9 @@
 # NvimPackage YAML Reference
 
-**Kind:** `NvimPackage`
+**Kind:** `NvimPackage`  
 **APIVersion:** `devopsmaestro.io/v1`
 
-An NvimPackage defines a named collection of Neovim plugins. Apply with `nvp apply -f <file>` and export with `nvp package get <name> -o yaml`.
-
----
+An NvimPackage represents a collection of related Neovim plugins that work together to provide a complete development environment for a specific use case.
 
 ## Full Example
 
@@ -22,191 +20,127 @@ metadata:
     maintainer: "devopsmaestro"
   annotations:
     version: "1.0.0"
-    last-updated: "2026-03-18"
+    last-updated: "2026-02-19"
+    documentation: "https://github.com/devopsmaestro/packages/golang-dev"
 spec:
   extends: "core"
   plugins:
+    # LSP and completion
     - neovim/nvim-lspconfig
     - williamboman/mason.nvim
     - williamboman/mason-lspconfig.nvim
     - hrsh7th/nvim-cmp
     - hrsh7th/cmp-nvim-lsp
+    
+    # Go-specific plugins
     - fatih/vim-go
     - ray-x/go.nvim
     - ray-x/guihua.lua
+    
+    # Debugging
     - mfussenegger/nvim-dap
     - leoluz/nvim-dap-go
     - rcarriga/nvim-dap-ui
+    
+    # Testing
     - nvim-neotest/neotest
     - nvim-neotest/neotest-go
+    
+    # Code formatting
     - stevearc/conform.nvim
-  enabled: true
 ```
-
----
 
 ## Field Reference
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `apiVersion` | string | Yes | Must be `devopsmaestro.io/v1` |
-| `kind` | string | Yes | Must be `NvimPackage` |
-| `metadata.name` | string | Yes | Unique identifier for the package |
-| `metadata.description` | string | No | Package description |
-| `metadata.category` | string | No | Package category |
-| `metadata.tags` | array | No | Tags for filtering and searching |
-| `metadata.labels` | object | No | Key-value labels |
-| `metadata.annotations` | object | No | Key-value annotations |
-| `spec.extends` | string | No | Name of parent package to inherit plugins from |
-| `spec.plugins` | array | Yes | List of plugin references to include |
-| `spec.enabled` | boolean | No | Enable or disable the package (default: `true`) |
-
----
+| `apiVersion` | string | ✅ | Must be `devopsmaestro.io/v1` |
+| `kind` | string | ✅ | Must be `NvimPackage` |
+| `metadata.name` | string | ✅ | Unique name for the package |
+| `metadata.description` | string | ❌ | Package description |
+| `metadata.category` | string | ❌ | Package category |
+| `metadata.tags` | array | ❌ | Tags for organization |
+| `metadata.labels` | object | ❌ | Key-value labels |
+| `metadata.annotations` | object | ❌ | Key-value annotations |
+| `spec.extends` | string | ❌ | Parent package to extend |
+| `spec.plugins` | array | ✅ | List of plugin names |
+| `spec.enabled` | boolean | ❌ | Enable or disable the package (default: `true`) |
 
 ## Field Details
 
 ### metadata.name (required)
+The unique identifier for the package.
 
-Unique identifier for the package. Used as the key in the package store.
-
-**Conventions:**
-- Use kebab-case: `golang-dev`, `typescript-full`, `python-data`
-- Include purpose or language: `rust-dev`, `web-frontend`, `data-science`
-- Be specific: `react-typescript` rather than `js-stuff`
+**Naming conventions:**
+- Use descriptive names: `golang-dev`, `typescript-full`, `python-data`
+- Include language/purpose: `rust-dev`, `web-frontend`, `data-science`
+- Be specific: `react-typescript` vs `javascript-basic`
 
 ### metadata.category (optional)
-
-Category for organization and browsing.
+Package category for organization.
 
 **Common categories:**
-- `core` - Base or foundation packages
 - `language` - Language-specific packages
-- `framework` - Framework-specific packages (React, Vue, etc.)
-- `purpose` - Purpose-specific packages (data-science, devops, etc.)
-- `specialty` - Specialized or niche packages
+- `framework` - Framework-specific (React, Vue, etc.)
+- `purpose` - Purpose-specific (data-science, devops, etc.)
+- `core` - Base/foundation packages
+- `specialty` - Specialized packages
 
 ### metadata.tags (optional)
-
-Tags for filtering and discovery.
+Tags for filtering and searching packages.
 
 ```yaml
 metadata:
-  tags: ["go", "golang", "lsp", "debugging", "testing"]
+  tags: ["go", "golang", "lsp", "debugging", "testing", "backend"]
 ```
 
 ### spec.extends (optional)
-
-Name of an existing package to inherit plugins from. The parent package's plugins are loaded first, then this package's plugins are appended.
+Parent package to inherit plugins from.
 
 ```yaml
 spec:
-  extends: "core"
+  extends: "core"                    # Inherit from core package
 ```
 
-**Inheritance chain:**
-
+**Package inheritance:**
 ```
-core -> golang-dev -> golang-web
+core → language-specific → framework-specific
 ```
 
-- `core` — base plugins (telescope, treesitter, lspconfig, etc.)
-- `golang-dev` extends `core` — adds Go-specific plugins
-- `golang-web` extends `golang-dev` — adds HTTP/REST tooling
-
-Package inheritance must not create circular dependencies.
+Example:
+- `core` (base plugins)
+- `golang-dev` extends `core` (adds Go plugins)
+- `golang-web` extends `golang-dev` (adds web-specific Go plugins)
 
 ### spec.plugins (required)
-
-List of plugin references to include in the package.
+List of plugin names to include in the package.
 
 ```yaml
 spec:
   plugins:
-    - neovim/nvim-lspconfig        # GitHub owner/repo format
-    - williamboman/mason.nvim
-    - fatih/vim-go
+    - neovim/nvim-lspconfig          # GitHub repo format
+    - telescope                      # Local plugin name
+    - cmp-nvim-lsp                   # Short name
 ```
 
-**Accepted formats:**
-- Full GitHub repository: `neovim/nvim-lspconfig`
-- Short name referencing an installed plugin: `telescope`
-
-Plugins referenced by short name must already exist in the local plugin store.
+**Plugin reference formats:**
+- Full GitHub repo: `neovim/nvim-lspconfig`
+- Short name: `telescope` (references local plugin)
+- Hyphenated: `cmp-nvim-lsp`
 
 ### spec.enabled (optional)
-
-Enable or disable the package. When `false`, the package is stored but not included when generating Lua. Defaults to `true`.
+Enable or disable the package. Defaults to `true`. When set to `false`, the package is stored but not applied.
 
 ```yaml
 spec:
-  enabled: false
+  enabled: false   # Disable this package
 ```
 
----
-
-## Usage Examples
-
-### Apply a Package
-
-```bash
-# Apply from a local file
-nvp apply -f golang-dev.yaml
-
-# Apply from a URL
-nvp apply -f https://packages.example.com/golang-dev.yaml
-
-# Apply from the plugin source library (if configured)
-nvp source sync
-nvp apply -f golang-dev.yaml
-```
-
-### List and Inspect Packages
-
-```bash
-# List all packages
-nvp package list
-
-# Alias
-nvp pkg list
-
-# Get package details
-nvp package get golang-dev
-
-# Export to YAML
-nvp package get golang-dev -o yaml
-
-# Save to file
-nvp package get golang-dev -o yaml > golang-dev.yaml
-```
-
-### Enable and Disable
-
-```bash
-# Disable a package without deleting it
-nvp package disable golang-dev
-
-# Re-enable it
-nvp package enable golang-dev
-
-# Delete a package
-nvp package delete golang-dev
-```
-
-### Generate Lua After Changes
-
-Always regenerate Lua after applying or modifying packages:
-
-```bash
-nvp generate
-```
-
----
-
-## Built-in Package Examples
+## Built-in Packages
 
 ### Core Package
 
-Base package providing essential IDE-like functionality:
+Base package with essential plugins:
 
 ```yaml
 apiVersion: devopsmaestro.io/v1
@@ -228,7 +162,7 @@ spec:
 
 ### Language Packages
 
-#### Go Development
+#### Golang Development
 
 ```yaml
 apiVersion: devopsmaestro.io/v1
@@ -269,12 +203,12 @@ kind: NvimPackage
 metadata:
   name: typescript-dev
   category: language
-  tags: ["typescript", "javascript"]
+  tags: ["typescript", "javascript", "node"]
 spec:
   extends: core
   plugins:
     - nvim-neotest/neotest-jest
-    - pmizio/typescript-tools.nvim
+    - mfussenegger/nvim-dap-node2
 ```
 
 ### Framework Packages
@@ -295,45 +229,166 @@ spec:
     - JoosepAlviste/nvim-ts-context-commentstring
 ```
 
----
+### Specialty Packages
+
+#### Data Science
+
+```yaml
+apiVersion: devopsmaestro.io/v1
+kind: NvimPackage
+metadata:
+  name: data-science
+  category: purpose
+  tags: ["python", "r", "jupyter", "data"]
+spec:
+  extends: python-dev
+  plugins:
+    - jupyter-vim/jupyter-vim
+    - goerz/jupytext.vim
+    - jalvesaq/Nvim-R
+```
 
 ## Package Inheritance Examples
 
-### Linear Chain
+### Linear Inheritance
 
 ```yaml
-# Base
+# Base package
 core:
   plugins: [telescope, treesitter, lspconfig]
 
-# Language layer extends base
+# Language package  
 golang-dev:
   extends: core
-  plugins: [vim-go, go.nvim, nvim-dap-go]
-  # Effective: telescope + treesitter + lspconfig + vim-go + go.nvim + nvim-dap-go
+  plugins: [vim-go, go.nvim]
+  # Result: telescope, treesitter, lspconfig, vim-go, go.nvim
 
-# Framework layer extends language layer
+# Framework package
 golang-web:
   extends: golang-dev
   plugins: [rest.nvim]
-  # Effective: all golang-dev plugins + rest.nvim
+  # Result: all golang-dev plugins + rest.nvim
 ```
 
----
+### Multiple Extensions
+
+```yaml
+# Web development could extend multiple bases
+web-dev:
+  extends: typescript-dev
+  plugins: [emmet-vim, vim-css-color]
+
+# Full-stack combines frontend + backend  
+fullstack-dev:
+  extends: web-dev
+  plugins: [vim-go, dockerfile.vim]
+```
+
+## Usage Examples
+
+### Create Custom Package
+
+```bash
+# From YAML file
+dvm apply -f my-package.yaml
+
+# From URL
+dvm apply -f https://packages.example.com/golang-dev.yaml
+
+# From GitHub
+dvm apply -f github:user/packages/my-stack.yaml
+```
+
+### List Packages
+
+```bash
+# List all packages
+dvm get nvim packages
+
+# List by category
+dvm get nvim packages --category language
+
+# Search packages  
+dvm get nvim packages --name "*golang*"
+```
+
+### Use in Workspace
+
+```yaml
+# Use package in workspace
+apiVersion: devopsmaestro.io/v1
+kind: Workspace
+metadata:
+  name: dev
+  app: go-api
+spec:
+  nvim:
+    pluginPackage: golang-dev       # Use the package
+    plugins:                        # Add extra plugins
+      - github/copilot.vim
+    mergeMode: append               # Extend package
+```
+
+### Export Package
+
+```bash
+# Export to YAML
+dvm get nvim package golang-dev -o yaml
+
+# Export for sharing
+dvm get nvim package my-custom-stack -o yaml > my-stack.yaml
+```
+
+## Package Merge Modes
+
+When using packages in workspaces, you can control how plugins are combined:
+
+```yaml
+spec:
+  nvim:
+    pluginPackage: golang-dev
+    plugins: [github/copilot.vim]
+    mergeMode: append               # How to merge
+```
+
+**Merge modes:**
+- `append` - Add workspace plugins to package plugins (default)
+- `replace` - Replace package plugins with workspace plugins
+
+## Best Practices
+
+### Package Design
+
+1. **Start with core** - Extend the `core` package for consistency
+2. **Be specific** - Create focused packages for specific use cases
+3. **Layer properly** - Use inheritance for related packages
+4. **Document well** - Include good descriptions and tags
+
+### Plugin Selection
+
+1. **Choose essential plugins** - Include only necessary plugins
+2. **Avoid conflicts** - Test plugin combinations
+3. **Consider performance** - Balance features with startup time
+4. **Stay updated** - Use maintained plugins
+
+### Configuration
+
+1. **Provide sane defaults** - Good out-of-the-box experience  
+2. **Keep it minimal** - Let users customize further
+3. **Use lazy loading** - Configure appropriate lazy loading
+4. **Add helpful keymaps** - Include common workflows
+
+## Related Resources
+
+- [Workspace](https://rmkohlman.github.io/devopsmaestro/reference/workspace/) - Use packages in workspaces
+- [NvimPlugin](nvim-plugin.md) - Individual plugins
+- [NvimTheme](nvim-theme.md) - Theme configurations
 
 ## Validation Rules
 
 - `metadata.name` must be unique across all packages
-- `spec.extends` must reference an existing package by name
-- `spec.plugins` must contain valid plugin references
+- `metadata.name` must be a valid DNS subdomain
+- `spec.extends` must reference an existing package
+- `spec.plugins` must be valid plugin references
 - Package inheritance must not create circular dependencies
-
----
-
-## Related
-
-- [Plugin Packages](../plugins/packages.md)
-- [Plugin Library](../plugins/library.md)
-- [NvimPlugin Reference](nvim-plugin.md)
-- [NvimTheme Reference](nvim-theme.md)
-- [Commands Reference](../commands.md)
+- Package names must not conflict with built-in packages

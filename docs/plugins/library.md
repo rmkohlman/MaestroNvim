@@ -1,164 +1,348 @@
-# Plugin Library
+# Plugins
 
-The nvp built-in library contains 38+ curated Neovim plugins with pre-configured setups ready to install.
+Managing Neovim plugins with nvp. Use the curated library of 54 plugins or plugin packages for complete setups.
 
 ---
 
-## Browsing the Library
+## Installing Plugins
+
+### From Library
+
+The easiest way — use the built-in library of 54 curated plugins:
 
 ```bash
-# List all available plugins
-nvp library list
+# Browse available plugins
+nvp library get
 
 # Filter by category
-nvp library list --category lsp
-nvp library list --category fuzzy-finder
-nvp library list --category git
+nvp library get --category lsp
 
-# List all categories
-nvp library categories
-
-# List all tags
-nvp library tags
-
-# Show details about a plugin
-nvp library show telescope
+# Install individual plugins
+nvp library import telescope
+nvp library import treesitter
 ```
 
----
+### From File
 
-## Installing from the Library
+Apply a plugin from a YAML file:
 
 ```bash
-nvp library install telescope
-nvp library install treesitter
-nvp library install lspconfig
+nvp apply -f my-plugin.yaml
 ```
 
-After installing, generate Lua files:
+### From URL
+
+Apply directly from a URL:
 
 ```bash
-nvp generate
+nvp apply -f https://example.com/plugin.yaml
+```
+
+### From GitHub
+
+Use GitHub shorthand:
+
+```bash
+nvp apply -f github:rmkohlman/nvim-yaml-plugins/plugins/telescope.yaml
+```
+
+### From Stdin
+
+Pipe YAML content:
+
+```bash
+cat plugin.yaml | nvp apply -f -
 ```
 
 ---
 
-## Available Plugins
-
-### Core Dependencies
-
-| Plugin | Description |
-|--------|-------------|
-| `plenary` | Lua utility functions (dependency for many plugins) |
-| `nvim-web-devicons` | File icons |
-
-### Fuzzy Finding and Navigation
-
-| Plugin | Description |
-|--------|-------------|
-| `telescope` | Fuzzy finder for files, grep, buffers, and more |
-| `harpoon` | Quick file navigation with bookmarks |
-
-### Syntax and Parsing
-
-| Plugin | Description |
-|--------|-------------|
-| `treesitter` | Advanced syntax highlighting and code understanding |
-| `treesitter-textobjects` | Text objects based on tree-sitter syntax |
-
-### LSP and Completion
-
-| Plugin | Description |
-|--------|-------------|
-| `lspconfig` | Language Server Protocol configuration |
-| `mason` | LSP/DAP/Linter installer |
-| `nvim-cmp` | Intelligent autocompletion |
-| `cmp-nvim-lsp` | LSP completion source |
-| `cmp-buffer` | Buffer completion source |
-| `cmp-path` | Filesystem path completion source |
-| `luasnip` | Snippet engine |
-
-### Git Integration
-
-| Plugin | Description |
-|--------|-------------|
-| `gitsigns` | Git decorations and hunk navigation |
-| `fugitive` | Git commands inside Neovim |
-| `diffview` | Side-by-side git diff viewer |
-
-### UI and Interface
-
-| Plugin | Description |
-|--------|-------------|
-| `lualine` | Status line |
-| `bufferline` | Buffer and tab line |
-| `which-key` | Keybinding discovery and help |
-| `alpha-nvim` | Dashboard / start screen |
-| `neo-tree` | File tree explorer |
-| `dressing` | Improved UI for inputs and selects |
-| `notify` | Better notifications |
-
-### Editing and Text Manipulation
-
-| Plugin | Description |
-|--------|-------------|
-| `comment` | Easy line and block commenting |
-| `surround` | Surround text with pairs |
-| `autopairs` | Auto-close brackets and quotes |
-| `conform` | Code formatting |
-| `nvim-lint` | Linting integration |
-
-### Terminal and AI
-
-| Plugin | Description |
-|--------|-------------|
-| `toggleterm` | Floating and split terminal management |
-| `copilot` | GitHub Copilot integration |
-| `copilot-cmp` | Copilot completion source for nvim-cmp |
-
-### Language-Specific
-
-| Plugin | Description |
-|--------|-------------|
-| `rust-tools` | Enhanced Rust development tools |
-| `go` | Go development with gopls and tools |
-| `typescript-tools` | TypeScript and JavaScript support |
-
----
-
-## Overriding a Library Plugin
-
-Library plugins come with default configurations. To customize a plugin, apply a YAML with your own `config` block — it will override the library version:
+## Plugin YAML Format
 
 ```yaml
 apiVersion: devopsmaestro.io/v1
 kind: NvimPlugin
 metadata:
   name: telescope
+  category: fuzzy-finder
+  description: Highly extendable fuzzy finder
 spec:
   repo: nvim-telescope/telescope.nvim
+  branch: master                    # Optional
+  version: "0.1.5"                  # Optional (tag)
+  enabled: true                     # Default: true
+  lazy: true                        # Default: true
+  event:                            # Lazy-load triggers
+    - VimEnter
+  cmd:                              # Commands that trigger load
+    - Telescope
+  dependencies:
+    - nvim-lua/plenary.nvim
+    - nvim-tree/nvim-web-devicons
   config: |
     require("telescope").setup({
       defaults = {
-        layout_strategy = "horizontal",
-        layout_config = {
-          width = 0.9,
-          height = 0.8,
-        },
+        file_ignore_patterns = { "node_modules", ".git" },
       },
     })
+  keys:
+    - key: "<leader>ff"
+      action: "<cmd>Telescope find_files<cr>"
+      desc: "Find files"
+    - key: "<leader>fg"
+      action: "<cmd>Telescope live_grep<cr>"
+      desc: "Live grep"
 ```
 
+---
+
+## Managing Plugins
+
+### List Installed Plugins
+
 ```bash
-nvp apply -f my-telescope.yaml
+nvp get
+```
+
+### Get Plugin Details
+
+```bash
+nvp get telescope
+nvp get telescope -o yaml
+```
+
+### Enable / Disable a Plugin
+
+```bash
+nvp enable telescope
+nvp disable copilot
+```
+
+### Delete a Plugin
+
+```bash
+nvp delete telescope
+```
+
+---
+
+## Library Plugins
+
+nvp includes 54 curated plugins with a plugin package system for complete setups:
+
+### Plugin Packages
+
+Complete plugin configurations for specific use cases are available via the library:
+
+| Package | Plugins | Description |
+|---------|---------|-------------|
+| `core` | 6 plugins | Essential base — telescope, treesitter, lspconfig, nvim-cmp, gitsigns, which-key |
+| `maestro` | 30+ plugins | Complete IDE with AI, Git, database, notes, and more |
+| `go-dev` | 11 plugins (incl. core) | Go development essentials |
+| `maestro-go` | Full Go IDE | Extends core with Go tools, DAP, neotest, formatting |
+| `maestro-python` | Full Python IDE | Extends core with Python tools, DAP, neotest, formatting |
+| `maestro-rust` | Full Rust IDE | Extends core with rustaceanvim, crates, neotest |
+| `maestro-node` | Full Node IDE | Extends core with neotest-jest, TypeScript tools |
+| `maestro-java` | Full Java IDE | Extends core with nvim-jdtls |
+| `maestro-gleam` | Gleam IDE | Extends core with Gleam tools |
+| `maestro-dotnet` | .NET IDE | Extends core with .NET tools |
+| `python-dev` | Python dev | Python development setup |
+| `full` | 17 plugins (incl. core) | Full plugin collection |
+
+Install all plugins from a package:
+
+```bash
+nvp package install core
+nvp package install maestro-go
+nvp package install --dry-run maestro-python  # preview first
+```
+
+### Individual Plugins
+
+Choose from 54 curated plugins:
+
+#### Core Dependencies
+
+> **Note:** `plenary` and `nvim-web-devicons` are used as dependencies by other plugins and are referenced by repo URL inside plugin YAML specs. They are not installed as standalone library plugins but are included automatically when needed.
+
+#### Fuzzy Finding & Navigation
+
+| Plugin | Description |
+|--------|-------------|
+| `telescope` | Fuzzy finder for everything |
+| `harpoon` | Quick file navigation |
+
+#### Syntax & Parsing
+
+| Plugin | Description |
+|--------|-------------|
+| `treesitter` | Advanced syntax highlighting |
+| `treesitter-textobjects` | Text objects based on syntax |
+
+#### LSP & Completion
+
+| Plugin | Description |
+|--------|-------------|
+| `lspconfig` | LSP configuration |
+| `mason` | LSP/DAP/Linter installer |
+| `nvim-cmp` | Autocompletion |
+| `formatting` | Code formatting (conform.nvim) |
+| `linting` | Code linting |
+
+#### Git Integration
+
+| Plugin | Description |
+|--------|-------------|
+| `gitsigns` | Git decorations and hunks |
+| `lazygit` | LazyGit terminal integration |
+
+#### UI & Interface
+
+| Plugin | Description |
+|--------|-------------|
+| `lualine` | Status line |
+| `bufferline` | Buffer/tab line |
+| `which-key` | Keybinding hints |
+| `alpha` | Dashboard |
+| `nvim-tree` | File tree (nvim-tree/nvim-tree.lua) |
+| `dressing` | Better UI for inputs/selects |
+| `indent-blankline` | Indentation guides |
+| `trouble` | Diagnostics and quickfix list |
+| `todo-comments` | TODO comment highlighting |
+
+#### Editing & Text Manipulation
+
+| Plugin | Description |
+|--------|-------------|
+| `comment` | Easy commenting |
+| `surround` | Surround text with pairs |
+| `autopairs` | Auto-close brackets |
+| `substitute` | Substitute text motions |
+| `vim-maximizer` | Window maximizer |
+| `auto-session` | Session management |
+
+#### Terminal & System
+
+| Plugin | Description |
+|--------|-------------|
+| `toggleterm` | Terminal management |
+
+#### AI & Assistance
+
+| Plugin | Description |
+|--------|-------------|
+| `copilot` | GitHub Copilot |
+| `copilot-cmp` | Copilot completion source |
+| `copilot-chat` | Copilot Chat with glob support |
+| `snacks` | QoL utility library (input, picker, opencode integration) |
+| `opencode` | opencode AI assistant integration |
+
+#### Database
+
+| Plugin | Description |
+|--------|-------------|
+| `dadbod` | Database client |
+| `dadbod-ui` | Database UI |
+| `dadbod-completion` | Database completion source |
+| `dbee` | Advanced database explorer |
+
+#### Markdown & Notes
+
+| Plugin | Description |
+|--------|-------------|
+| `render-markdown` | Enhanced markdown rendering |
+| `markdown-preview` | Markdown browser preview |
+| `obsidian` | Obsidian note-taking integration |
+
+#### Debug & Test
+
+| Plugin | Description |
+|--------|-------------|
+| `nvim-dap` | Debug Adapter Protocol |
+| `neotest` | Test runner framework |
+
+#### Language-Specific
+
+| Plugin | Description |
+|--------|-------------|
+| `gopher-nvim` | Go development tools |
+| `nvim-dap-go` | Go debugger (Delve) |
+| `neotest-go` | Go test runner |
+| `rustaceanvim` | Rust development tools |
+| `crates-nvim` | Rust crates.io integration |
+| `neotest-rust` | Rust test runner |
+| `nvim-dap-python` | Python debugger |
+| `neotest-python` | Python test runner |
+| `venv-selector` | Python virtualenv selector |
+| `neotest-jest` | JavaScript/TypeScript test runner |
+| `nvim-jdtls` | Java LSP (eclipse.jdt.ls) |
+| `euporie` | Jupyter notebook editing |
+
+See full list:
+
+```bash
+nvp library get
+```
+
+---
+
+## Generating Lua Files
+
+After installing plugins, generate the Lua files:
+
+```bash
 nvp generate
+```
+
+This creates files in `~/.config/nvim/lua/plugins/nvp/`.
+
+### Custom Output Directory
+
+```bash
+nvp generate --output-dir ~/my-config/lua/plugins
+```
+
+---
+
+## Plugin Dependencies
+
+Dependencies are automatically handled:
+
+```yaml
+spec:
+  dependencies:
+    - nvim-lua/plenary.nvim
+    - repo: nvim-tree/nvim-web-devicons
+      config: |
+        require("nvim-web-devicons").setup()
+```
+
+Simple dependencies are just repo strings. Complex dependencies can have their own config.
+
+---
+
+## Lazy Loading
+
+Control when plugins load:
+
+```yaml
+spec:
+  lazy: true          # Don't load on startup
+  event:              # Load on these events
+    - BufReadPost
+    - BufNewFile
+  cmd:                # Load when these commands run
+    - Telescope
+  ft:                 # Load for these filetypes
+    - python
+    - go
+  keys:               # Load when these keys are pressed
+    - key: "<leader>ff"
+      action: "<cmd>Telescope find_files<cr>"
 ```
 
 ---
 
 ## Next Steps
 
-- [Plugin Packages](packages.md) - Install curated plugin sets
-- [Plugin Sources](sources.md) - Configure remote plugin sources
-- [NvimPlugin YAML Reference](../reference/nvim-plugin.md) - All YAML fields explained
-- [Commands Reference](../commands.md) - Full command reference
+- [Themes](../themes/overview.md) - Manage colorschemes
+- [Commands Reference](../commands.md) - Full command list
