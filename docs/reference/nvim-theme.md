@@ -58,6 +58,7 @@ spec:
 | `metadata.description` | string | ❌ | Theme description |
 | `metadata.author` | string | ❌ | Theme author |
 | `metadata.category` | string | ❌ | Theme category (dark/light/both) |
+| `spec.inherits` | string | ❌ | Single parent theme name to inherit from (child fields override parent) |
 | `spec.plugin` | object | ❌ | Plugin repository information (omit for standalone themes) |
 | `spec.plugin.repo` | string | ❌ | GitHub repository (required for plugin-based themes) |
 | `spec.plugin.branch` | string | ❌ | Git branch |
@@ -86,6 +87,58 @@ Theme category for organization and filtering.
 - `light` - Light theme  
 - `both` - Theme with both variants
 - `monochrome` - Black and white theme
+
+### spec.inherits (optional)
+Name of a single parent theme this theme inherits from. The child theme starts with all fields from the parent and overrides selectively. Scalar `spec` fields (such as `spec.style`) follow last-writer-wins — if the child sets the field, the child value is used; otherwise the parent value is inherited. Map-valued fields (`spec.colors`, `spec.options`, `spec.customHighlights`) are **deep-merged**: the result starts from the parent's map and the child's keys are overlaid on top, so unspecified parent keys are preserved.
+
+```yaml
+# Parent theme
+apiVersion: devopsmaestro.io/v1
+kind: NvimTheme
+metadata:
+  name: coolnight-ocean
+  category: dark
+spec:
+  plugin:
+    repo: "rmkohlman/coolnight.nvim"
+  style: "ocean"
+  colors:
+    bg: "#0a0e27"
+    fg: "#c0caf5"
+    primary: "#7aa2f7"
+    secondary: "#bb9af7"
+    accent: "#7dcfff"
+    error: "#f7768e"
+  options:
+    italic_comments: true
+    transparent_background: false
+---
+# Child theme inheriting from coolnight-ocean
+apiVersion: devopsmaestro.io/v1
+kind: NvimTheme
+metadata:
+  name: coolnight-ocean-bright
+  category: dark
+spec:
+  inherits: coolnight-ocean   # Inherit plugin, style, colors, and options from parent
+  colors:
+    primary: "#89b4ff"        # Override only this color key
+    accent: "#a6e3ff"         # Override only this color key
+    # bg, fg, secondary, error are inherited from coolnight-ocean
+  options:
+    transparent_background: true  # Override only this option key
+    # italic_comments: true is inherited from coolnight-ocean
+```
+
+In the example above, the child's effective `spec.colors` becomes `{bg, fg, primary (overridden), secondary, accent (overridden), error}` — the parent's keys are preserved except where the child supplies a new value. The same per-key merge applies to `spec.options` and `spec.customHighlights`.
+
+When listed via `dvm get nvim themes`, child themes display an `Inherits` field showing the parent name. Fields not set on the child are reported as `(inherits)` from the parent.
+
+**Notes:**
+- Only a single parent name is supported (no multi-inheritance).
+- The parent theme must exist in the theme store at apply/render time.
+- For `spec.colors`, `spec.options`, and `spec.customHighlights`, merging is performed per top-level key in the JSON object (one-level deep merge): child keys override parent keys, and parent keys not present on the child are preserved. Nested objects under those keys are not recursively merged — they are replaced wholesale by the child if specified.
+- For scalar `spec` fields like `spec.style`, the child value overrides the parent only if the child explicitly sets it; otherwise the parent value is inherited.
 
 ### spec.plugin (optional)
 Plugin repository that provides the colorscheme. Omit entirely for standalone themes — themes without a plugin repo apply colors directly via `vim.api.nvim_set_hl()`.
